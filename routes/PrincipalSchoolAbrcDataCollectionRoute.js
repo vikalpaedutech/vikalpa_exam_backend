@@ -17,7 +17,8 @@ PrincipalSchoolAbrcDataCollectionRoute.use(bodyParser.urlencoded({extended:true}
 
 
 PrincipalSchoolAbrcDataCollectionRoute.post('/create-principal-abrc', PrincipalSchoolAbrcDataCollectionController.CreateData)
+PrincipalSchoolAbrcDataCollectionRoute.post('/get-principal-abrc', PrincipalSchoolAbrcDataCollectionController.GetData)
 
-
+PrincipalSchoolAbrcDataCollectionRoute.patch('/update-principal-abrc', PrincipalSchoolAbrcDataCollectionController.UpdateData)
 
 module.exports = PrincipalSchoolAbrcDataCollectionRoute;
