@@ -1,23 +1,23 @@
-const express = require('express');
-const UserRoute = express();
-const bodyParser = require('body-parser')
+//routes for student.controller.js
 
-const UserController = require('../controllers/UserController');
-const multer = require('multer');
-const upload = multer();
+import express from "express";
 
+import { createOrUpdateUser, getUserWithAccessById, getUserWithMobileAndPassword,
+    changePasswordUsingMobile
+ } from "../controllers/UserController.js";
 
+//creating express router.
 
+const router = express.Router();
 
-UserRoute.use(bodyParser.json());
-UserRoute.use(bodyParser.urlencoded({extended:true}));
+//Post route 
 
-//Below will be all the routes...
+router.post('/create-update-user', createOrUpdateUser);
+router.post('/get-user-withaccess', getUserWithAccessById);
+router.post('/get-user-with-mobile-password', getUserWithMobileAndPassword);
 
-UserRoute.post('/user', upload.none(), UserController.PostUser);
-UserRoute.get('/userByMobile/:mobile', UserController.GetUser);
+router.post('/update-password', changePasswordUsingMobile);
 
+// Upload dress size PDF for a student
 
-
-
-module.exports = UserRoute;
+export default router;

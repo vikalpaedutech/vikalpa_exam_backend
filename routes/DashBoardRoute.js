@@ -1,19 +1,23 @@
-const express = require('express');
-const DashBoardRoute = express();
-const DashBoardController = require('../controllers/DashBoardController');
+//routes for student.controller.js
 
-DashBoardRoute.get('/Dashboard-8', DashBoardController.GetDataFor8Dashboard);
-DashBoardRoute.get('/Dashboard-10', DashBoardController.GetDataFor10Dashboard);
-DashBoardRoute.get('/Students-data/:srn?/:isRegisteredBy?/:isVerified?/:grade?/:district?/:block?/:school?/:isQualifiedL1?/:isQualifiedL2?/:isQualifiedL3?/:L1examinationCenter?/:L2examinationCenter?/:L3examinationCenter?/:attendancePdf?/:admitCard1?/:Level3StudentsRoomNumber?', DashBoardController.GetAllStudentData);
-//DashBoardRoute.get('/Students-data', DashBoardController.GetAllStudentData);
-DashBoardRoute.get('/Student-data-roomandbed', DashBoardController.GetAllStudentDataWithRoomAndBedNo);
-
-DashBoardRoute.get('/room-statistics', DashBoardController.GetRoomStatisticsByBatchDivision);
+import express from "express";
 
 
+import { GetStudentsRegisteredByUserCount, GetStudentsRegisteredByUser,
+    DashboardCounts
+ } from "../controllers/DashBoardController.js";
+//creating express router.
 
-DashBoardRoute.get('/counselling-dash', DashBoardController.GetDataFor8DashboardCounselling);
+const router = express.Router();
 
-module.exports = DashBoardRoute;
+//Post route 
+
+router.post('/get-students-registered-by-user-count',  GetStudentsRegisteredByUserCount);
+
+router.post('/get-students-registered-by-user',  GetStudentsRegisteredByUser);
+
+router.get('/l1-dashboard-counts',  DashboardCounts);
 
 
+
+export default router;
