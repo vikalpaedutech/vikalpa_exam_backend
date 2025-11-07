@@ -177,8 +177,8 @@ const StudentSchema = new Schema(
 
     //^^^^^^^^^^^^^^^^^^^
     classOfStudent: { type: String}, // 
-    image: { type: String }, // Assuming this is a file path or base64 string
-    imageUrl: { type: String }, // URL to the image
+    image: { type: String, default:'Not uploaded' }, // Assuming this is a file path or base64 string
+    imageUrl: { type: String, default:'Not uploaded' }, // URL to the image
 
     //Verification status
     isRegisteredBy: {   type: String, // reference to User
@@ -192,7 +192,7 @@ const StudentSchema = new Schema(
     slipId: {type: String, default:null}, //Genereates dynamic acknowledgment id for the login of the students.
 
 
-    rollNumber: { type: String },
+    rollNumber: { type: String, default: null },
    //Below for admit card status
     isL1AdmitCardDownloaded: {type: Boolean, default: false},
     isL2AdmitCardDownloaded: {type: Boolean, default: false},
@@ -202,14 +202,15 @@ const StudentSchema = new Schema(
 
     //Below are for examination
   
-    L1ExaminationDistrict: {type: String},
-    L1ExaminationBlock: {type: String},
-    L1ExaminationCenter: {type: String},
-    L1ExaminationDate: {type: Date},
 
-    L2ExaminationDistrict: {type: String},
-    L2ExaminationBlock: {type: String},
-    L2ExaminationCenter: {type: String},
+    L1ExaminationDistrict: {type: String, default:null},
+    L1ExaminationBlock: {type: String, default: null},
+    L1ExaminationCenter: {type: String, default:null},
+    L1ExaminationDate: {type: Date, default: null},
+
+    L2ExaminationDistrict: {type: String, default:null},
+    L2ExaminationBlock: {type: String, default:null},
+    L2ExaminationCenter: {type: String, default:null},
     L2ExaminationDate: {type: Date},
 
 

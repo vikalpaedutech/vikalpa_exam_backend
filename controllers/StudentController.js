@@ -254,3 +254,40 @@ export const getStudentBySrnNumberOrSlipId = async (req, res) => {
     });
   }
 };
+
+
+
+
+
+
+
+
+
+//Updating students admit card download status in db
+
+
+export const IsAdmitCardDownloaded = async (req, res) =>{
+
+  console.log('hello admit card download status')
+const {_id, admitCardDownloadStatus} = req.body
+ 
+console.log(req.body)
+
+  try {
+    
+    const response = await Student.findOneAndUpdate({_id:_id},  { $set: admitCardDownloadStatus }, { new: true })
+
+     return res.status(200).json({
+      ok: true,
+      message: "Admit card stuatus updated successfully",
+      data: response,
+    });
+  } catch (error) {
+    console.log("Error occures while updating", error)
+     return res.status(500).json({
+      ok: false,
+      message: "Internal server error",
+      error: err.message,
+    });
+  }
+}
