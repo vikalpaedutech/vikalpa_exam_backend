@@ -10,7 +10,14 @@ const DistrictBlockBuniyaadCenterSchema = new Schema(
     blockName: {type: String},
     centerId: {type: String},
     centerName: {type: String},
-    schoolType: {type: String}
+    schoolType: {type: String},//For separating buniyaad centers and haryana schools
+    
+    isCluster: {type: Boolean, default: false},
+    abrc: {type: String, default: null},
+    abrcContact: {type: String, default:null},
+    principal: {type: String, default: null },
+    princiaplContact: {type: String, default: null},
+    principalAbrcDataUpdatedBy: {type: String, default:null}
 
   },
   { timestamps: true }

@@ -363,3 +363,42 @@ export const DashboardCounts = async (req, res) => {
     return res.status(500).json({ message: "Internal server error", error: String(error) });
   }
 };
+
+
+
+
+
+
+
+
+export const GetRegisteredStudentsDataBySchoolAndClass = async (req, res) => {
+  const { schoolCode, classOfStudent } = req.body;
+  console.log(req.body);
+
+  // Basic validation (optional but recommended)
+  if (!schoolCode || !classOfStudent) {
+    return res.status(400).json({ status: "error", message: "schoolCode and classOfStudent are required" });
+  }
+
+  try {
+    const response = await Student.find({
+      schoolCode: schoolCode,
+      classOfStudent: classOfStudent,
+      // use $nin to exclude null/empty/undefined
+      isRegisteredBy: { $nin: [null, "", undefined] }
+    });
+
+    return res.status(200).json({
+      status: "okay",
+      message: "Data fetched successfully",
+      data: response
+    });
+  } catch (error) {
+    console.error("Error fetching data", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Failed to fetch registered students",
+      error: error.message
+    });
+  }
+};
