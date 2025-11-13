@@ -48,6 +48,88 @@ export const uploadAttendancePdfFile = multer({ storage, fileFilter: anyFileFilt
  */
 
 
+// export const createStudent = async (req, res) => {
+//   try {
+//     // Note: when using multer, req.body values are strings.
+//     // If you need booleans/numbers convert them explicitly.
+
+//     console.log("Hello api")
+
+//     const data = req.body || {};
+
+//     console.log(req.body)
+
+//     // Minimal validation
+//     if (!data.srn || !data.aadhar) {
+//       return res.status(400).json({ message: "SRN and Aadhar are required fields." });
+//     }
+
+//     // Check for existing student with same SRN or Aadhar
+//     const existing = await Student.findOne({
+//       $or: [{ srn: data.srn } ],  //{ aadhar: data.aadhar }
+//     });
+
+//     if (existing) {
+//       return res.status(409).json({ message: "Student with this SRN." });
+//     }
+
+//     // If an image file was uploaded (multer placed it on req.file), upload to DO Spaces
+//     if (req.file && req.file.buffer) {
+//       try {
+//         // Build a safe filename: srn_timestamp_ext (fallback to Date.now if srn not present)
+//         const ext = path.extname(req.file.originalname) || "";
+//         const safeSrn = (data.srn || `unknown`).toString().replace(/\s+/g, "_");
+//         const fileName = `${safeSrn}_${Date.now()}${ext}`;
+
+//         // uploadToDOStorage(fileBuffer, fileName, mimeType)
+//         const uploadedUrl = await uploadToDOStorage(req.file.buffer, fileName, req.file.mimetype);
+
+//         // set imageUrl in data so it will be saved with student doc
+//         data.imageUrl = uploadedUrl;
+//         // optionally also set image field to filename or originalname
+//         data.image = fileName;
+//       } catch (uploadErr) {
+//         console.error("Error uploading image to DO Spaces:", uploadErr);
+//         return res.status(500).json({
+//           success: false,
+//           message: "Failed to upload image to storage.",
+//           error: uploadErr.message,
+//         });
+//       }
+//     }
+
+//     // Create and save new student
+//     const student = new Student(data);
+//     await student.save();
+
+//     return res.status(201).json({
+//       success: true,
+//       message: "Student created successfully.",
+//       data:student,
+//     });
+//   } catch (error) {
+//     console.error("Error creating student:", error);
+//     // Handle mongoose unique index error (in-case of race condition)
+//     if (error.code === 11000) {
+//       const dupField = Object.keys(error.keyValue || {}).join(", ");
+//       return res.status(409).json({
+//         success: false,
+//         message: `Duplicate field(s): ${dupField}.`,
+//         error: error.message,
+//       });
+//     }
+//     return res.status(500).json({
+//       success: false,
+//       message: "Server error while creating student.",
+//       error: error.message,
+//     });
+//   }
+// };
+
+
+
+
+
 export const createStudent = async (req, res) => {
   try {
     // Note: when using multer, req.body values are strings.
@@ -66,14 +148,9 @@ export const createStudent = async (req, res) => {
 
     // Check for existing student with same SRN or Aadhar
     const existing = await Student.findOne({
-      $or: [{ srn: data.srn }, { aadhar: data.aadhar }],
+      $or: [{ srn: data.srn } ],  //{ aadhar: data.aadhar }
     });
 
-    if (existing) {
-      return res.status(409).json({ message: "Student with this SRN or Aadhar already exists." });
-    }
-
-    // If an image file was uploaded (multer placed it on req.file), upload to DO Spaces
     if (req.file && req.file.buffer) {
       try {
         // Build a safe filename: srn_timestamp_ext (fallback to Date.now if srn not present)
@@ -94,6 +171,43 @@ export const createStudent = async (req, res) => {
           success: false,
           message: "Failed to upload image to storage.",
           error: uploadErr.message,
+        });
+      }
+    }
+
+    // If an existing student with the SRN was found, update it instead of returning an error.
+    if (existing) {
+      try {
+        // Copy fields from incoming data to the existing document but avoid overwriting immutable fields like _id.
+        Object.keys(data).forEach((key) => {
+          if (key === "_id") return;
+          // If you want to avoid overwriting certain fields (createdAt, srn, etc.) adjust here.
+          existing[key] = data[key];
+        });
+
+        // Save updated document
+        const updated = await existing.save();
+
+        return res.status(200).json({
+          success: true,
+          message: "Student updated successfully.",
+          data: updated,
+        });
+      } catch (updateErr) {
+        console.error("Error updating existing student:", updateErr);
+        // Handle mongoose unique index error (in-case of race condition) during update
+        if (updateErr.code === 11000) {
+          const dupField = Object.keys(updateErr.keyValue || {}).join(", ");
+          return res.status(409).json({
+            success: false,
+            message: `Duplicate field(s): ${dupField}.`,
+            error: updateErr.message,
+          });
+        }
+        return res.status(500).json({
+          success: false,
+          message: "Server error while updating student.",
+          error: updateErr.message,
         });
       }
     }
@@ -125,6 +239,7 @@ export const createStudent = async (req, res) => {
     });
   }
 };
+
 
 
 

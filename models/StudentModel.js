@@ -148,7 +148,7 @@ const StudentSchema = new Schema(
     dob: { type: Date,  },
     gender: { type: String,  },
     category: { type: String,  },
-    aadhar: { type: String, unique: true,  },
+    aadhar: { type: String,   },
     mobile: { type: String,  },
     whatsapp: { type: String,  },
 
