@@ -83,6 +83,7 @@ import UserRoute from "./routes/UserRoute.js"
 import StudentVerificationRoute from "./routes/StudentVerificationRoute.js"
 import DashboardRoute from "./routes/DashBoardRoute.js"
 import SendOtpRoute from "./routes/SendOtpRout.js"
+import ABRC_principal_beo_calling from "./routes/ABRC_principal_beo_callingRoute.js"
 // //using routes for route.g
 
 // app.use('/api', districtRouter);
@@ -94,6 +95,7 @@ app.use("/api", UserRoute);
 app.use("/api", StudentVerificationRoute);
 app.use("/api", DashboardRoute);
 app.use("/api", SendOtpRoute);
+app.use("/api", ABRC_principal_beo_calling);
 
 // app.use("/api", studentAttendanceRouter);
 // app.use("/api", examAndTestRouter);

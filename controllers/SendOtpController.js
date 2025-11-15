@@ -10,12 +10,23 @@ export const sendOtp = async (req, res) => {
     return res.status(400).json({ status: "Failed", message: "Missing phone or OTP" });
   }
 
-  const smsText = `Dear user, your OTP for Vikalpa Account Sign-up is: ${otp}. Please do not share it with anyone. Vikalpa.`;
+ // const smsText = `Dear user, your OTP for Vikalpa Account Sign-up is: ${otp}. Please do not share it with anyone. Vikalpa.`;
 
-  const smsUrl = `http://sms.gooadvert.com/api/mt/SendSMS?APIKey=e3744d6493af43768cc71287368c1293&senderid=VIKLPA&channel=Trans&DCS=0&flashsms=0&number=${phone}&text=${encodeURIComponent(smsText)}&route=5&PEId=1401539030000072375`;
+const smsText = `Dear user, your OTP for Pratibha Khoj Entrance Exam is: ${otp}. Please do not share it with anyone. Vikalpa Foundation`
+
+
+  //const smsUrl = `http://sms.gooadvert.com/api/mt/SendSMS?APIKey=e3744d6493af43768cc71287368c1293&senderid=VIKLPA&channel=Trans&DCS=0&flashsms=0&number=${phone}&text=${encodeURIComponent(smsText)}&route=5&PEId=1401539030000072375`;
+
+  
+
+  const smsUrl = `http://sms.gooadvert.com/api/mt/SendSMS?APIKey=bb4de80dfb954a519e056c0122237241&senderid=VIKLPA&channel=Trans&DCS=0&flashsms=0&number=${phone}&text=${encodeURIComponent(smsText)}&route=5&PEId=1401539030000072375`;
+
+
 
   try {
     const response = await axios.get(smsUrl);
+
+    
     return res.status(200).json({ status: "Success", response: response.data });
   } catch (error) {
     console.error("OTP Sending Error:", error.message);
