@@ -226,6 +226,8 @@ export const GetCallLogsCurrentData = async (req, res) => {
     const rangeStartUtc = new Date(rangeStartIst.getTime() - IST_OFFSET_MS);
     const rangeEndUtc = new Date(startOfIstDay.getTime() - IST_OFFSET_MS + 24 * 60 * 60 * 1000 - 1); // end of today IST in UTC
 
+console.log(rangeStartUtc, )
+console.log(rangeEndUtc, )
     // pagination (still via query params if provided)
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const limit = Math.min(1000, Math.max(1, parseInt(req.query.limit, 10) || 1000));

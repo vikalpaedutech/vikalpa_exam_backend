@@ -3,6 +3,7 @@
 import mongoose, { Schema } from "mongoose";
 
 const DistrictBlockBuniyaadCenterSchema = new Schema(
+  
   {
     districtId: { type: String },
     districtName: { type: String},
@@ -17,9 +18,16 @@ const DistrictBlockBuniyaadCenterSchema = new Schema(
     abrcContact: {type: String, default:null},
     principal: {type: String, default: null },
     princiaplContact: {type: String, default: null},
-    principalAbrcDataUpdatedBy: {type: String, default:null}
+    principalAbrcDataUpdatedBy: {type: String, default:null},
 
-  },
+     beo: {type: String, default: null},
+    beoContact: {type: String, default:null},
+    deo: {type: String, default: null},
+     deoContact: {type: String, default:null},
+
+
+  }
+  ,
   { timestamps: true }
 );
 

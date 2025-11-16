@@ -33,6 +33,10 @@ const CallLogsSchema = new Schema(
     principal: {type: String, default: null },
     princiaplContact: {type: String, default: null},
     principalAbrcDataUpdatedBy: {type: String, default:null},
+    beo: {type: String, default: null},
+    beoContact: {type: String, default:null},
+    deo: {type: String, default: null},
+     deoContact: {type: String, default:null},
 
     callingStatus: {type: String, default:null}, //Connected, not connected.
     callingRemark: {type: String, default:null}, //Remark blc, registration.
