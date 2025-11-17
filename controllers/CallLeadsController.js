@@ -533,14 +533,157 @@ export const CreateABRCLeads = async (req, res) => {
 
 
 //Get call leads with aggeregation
+
+
+
+// export const GetCallLeadsByUserObjectId = async (req, res) => {
+
+//   try {
+
+//     const { objectIdOfCaller, callMadeTo } = req.body;
+//     console.log(req.body)
+
+//     // Validate required input
+//     if (!callMadeTo) {
+//       return res.status(400).json({ status: "error", message: "callMadeTo is required in body" });
+
+//     }
+
+//     // Build match stage
+//     const match = { callMadeTo };
+
+//     // add 5-day filter (from now)
+//     const now = new Date();
+//     const fiveDaysAgo = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
+//     match.callingDate = { $gte: fiveDaysAgo };
+
+//     if (objectIdOfCaller !== undefined && objectIdOfCaller !== null && String(objectIdOfCaller).trim() !== "") {
+//       try {
+//         match.objectIdOfCaller = new mongoose.Types.ObjectId(String(objectIdOfCaller));
+//       } catch (err) {
+//         return res.status(400).json({ status: "error", message: "Invalid objectIdOfCaller" });
+//       }
+//     } else {
+//       // if objectIdOfCaller not provided, we match all leads for the given callMadeTo within last 5 days
+//       // (if you want to require objectIdOfCaller, uncomment below)
+//       // return res.status(400).json({ status: "error", message: "objectIdOfCaller is required" });
+//     }
+
+//     const pipeline = [
+//       { $match: match },
+
+//       // lookup caller user details
+//       {
+//         $lookup: {
+//           from: "users",
+//           localField: "objectIdOfCaller",
+//           foreignField: "_id",
+//           as: "callerUser"
+//         }
+//       },
+//       { $unwind: { path: "$callerUser", preserveNullAndEmptyArrays: true } },
+
+//       // lookup useraccesses for the caller (by unqUserObjectId)
+//       {
+//         $lookup: {
+//           from: "useraccesses",
+//           localField: "objectIdOfCaller",
+//           foreignField: "unqUserObjectId",
+//           as: "callerAccesses"
+//         }
+//       },
+//       // callerAccesses may be array; keep as array
+
+//       // lookup details about the called person: district_block_schools doc
+//       {
+//         $lookup: {
+//           from: "district_block_schools",
+//           localField: "objectIdOfCalledPerson",
+//           foreignField: "_id",
+//           as: "calledSchool"
+//         }
+//       },
+//       { $unwind: { path: "$calledSchool", preserveNullAndEmptyArrays: true } },
+
+//       // project friendly output
+//       {
+//         $project: {
+//           _id: 1,
+//           callMadeTo: 1,
+//           districtId: 1,
+//           blockId: 1,
+//           centerId: 1,
+//           callType: 1,
+//           callingStatus: 1,
+//           callingRemark1: 1,
+//           callingRemark2: 1,
+//           mannualRemark: 1,
+//           callingDate: 1,
+//           createdAt: 1,
+//           updatedAt: 1,
+
+//           // caller user summary (may be null)
+//           callerUser: {
+//             _id: "$callerUser._id",
+//             userName: "$callerUser.userName",
+//             designation: "$callerUser.designation",
+//             mobile: "$callerUser.mobile",
+//             createdAt: "$callerUser.createdAt",
+//             updatedAt: "$callerUser.updatedAt"
+//           },
+
+//           // caller accesses array
+//           callerAccesses: 1, // raw useraccess documents (region array inside)
+
+//           // called school summary (may be null)
+//           calledPerson: {
+//             _id: "$calledSchool._id",
+//             districtId: "$calledSchool.districtId",
+//             districtName: "$calledSchool.districtName",
+//             blockId: "$calledSchool.blockId",
+//             blockName: "$calledSchool.blockName",
+//             centerId: "$calledSchool.centerId",
+//             centerName: "$calledSchool.centerName",
+//             principal: "$calledSchool.principal",
+//             princiaplContact: "$calledSchool.princiaplContact",
+//             abrc: "$calledSchool.abrc",
+//             abrcContact: "$calledSchool.abrcContact",
+//             isCluster: "$calledSchool.isCluster"
+//           }
+//         }
+//       },
+
+//       // sort newest first
+//       { $sort: { callingDate: -1, createdAt: -1 } }
+//     ];
+
+
+//     const data = await CallLeads.aggregate(pipeline);
+
+//     return res.status(200).json({
+//       status: "oK",
+//       count: Array.isArray(data) ? data.length : 0,
+//       data
+//     });
+//   } catch (error) {
+//     console.error("GetCallLeadsByUserObjectId error:", error);
+//     return res.status(500).json({ status: "error", message: error.message || "Server error" });
+//   }
+// };
+
+
+
 export const GetCallLeadsByUserObjectId = async (req, res) => {
+
   try {
+
     const { objectIdOfCaller, callMadeTo } = req.body;
     console.log(req.body)
 
     // Validate required input
     if (!callMadeTo) {
       return res.status(400).json({ status: "error", message: "callMadeTo is required in body" });
+
     }
 
     // Build match stage
@@ -599,6 +742,28 @@ export const GetCallLeadsByUserObjectId = async (req, res) => {
       },
       { $unwind: { path: "$calledSchool", preserveNullAndEmptyArrays: true } },
 
+      // lookup for calledPersonRegion based on abrcContact
+      {
+        $lookup: {
+          from: "district_block_schools",
+          let: { abrcContact: "$calledSchool.abrcContact" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$abrcContact", "$$abrcContact"] },
+                    { $ne: ["$abrcContact", null] },
+                    { $ne: ["$abrcContact", ""] }
+                  ]
+                }
+              }
+            }
+          ],
+          as: "calledPersonRegion"
+        }
+      },
+
       // project friendly output
       {
         $project: {
@@ -643,13 +808,17 @@ export const GetCallLeadsByUserObjectId = async (req, res) => {
             abrc: "$calledSchool.abrc",
             abrcContact: "$calledSchool.abrcContact",
             isCluster: "$calledSchool.isCluster"
-          }
+          },
+
+          // called person region - all schools with same abrcContact
+          calledPersonRegion: 1
         }
       },
 
       // sort newest first
       { $sort: { callingDate: -1, createdAt: -1 } }
     ];
+
 
     const data = await CallLeads.aggregate(pipeline);
 
@@ -663,6 +832,56 @@ export const GetCallLeadsByUserObjectId = async (req, res) => {
     return res.status(500).json({ status: "error", message: error.message || "Server error" });
   }
 };
+
+
+
+
+//Get district_block_schools by contact numbers
+
+export const GetDistrictBlockSchoolsByContact = async (req, res) => {
+
+console.log("Hello get district blocks schools data")
+
+const {callMadeTo, abrcContact, princiaplContact,beoContact, deoContact } = req.body;
+
+
+console.log(req.body)
+
+let contactNumber = {};
+
+if (callMadeTo === "Principal"){
+
+    contactNumber = {
+        princiaplContact:princiaplContact
+    }
+} else if (callMadeTo === "ABRC"){
+
+    contactNumber = {
+        abrcContact:abrcContact
+    }
+} else if (callMadeTo === "DEO"){
+    contactNumber = {
+        deoContact:deoContact
+    }
+}   else if (callMadeTo === "BEO"){
+    contactNumber = {
+        beoContact:beoContact
+    }
+}
+
+console.log(contactNumber)
+
+    try {
+        const response = await District_Block_School.find (contactNumber)
+
+
+        res.status(200).json({status:"Ok", data: response})
+
+    } catch (error) {
+        
+    }
+}
+
 
 
 

@@ -4,7 +4,7 @@ import express from "express"
 
 import { CreatePrincipalCallLeads, CreateABRCLeads, GetCallLeadsByUserObjectId,
 
-    UpdateCallLeads
+    UpdateCallLeads, GetDistrictBlockSchoolsByContact
 } from "../controllers/CallLeadsController.js";
 const router = express();
 
@@ -22,6 +22,10 @@ const router = express();
 
 
    router.post("/update-call-leads", UpdateCallLeads)
+
+   
+   router.post("/get-district-block-schools-by-contact", GetDistrictBlockSchoolsByContact)
+
 
 
 export default router;
