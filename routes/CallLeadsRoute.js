@@ -4,7 +4,7 @@ import express from "express"
 
 import { CreatePrincipalCallLeads, CreateABRCLeads, GetCallLeadsByUserObjectId,
 
-    UpdateCallLeads, GetDistrictBlockSchoolsByContact
+    UpdateCallLeads, GetDistrictBlockSchoolsByContact, CreateBeosLeads, CreateDeosLeads
 } from "../controllers/CallLeadsController.js";
 const router = express();
 
@@ -18,6 +18,13 @@ const router = express();
  router.post("/create-abrc-call-leads", CreateABRCLeads)
 
 
+  router.post("/create-beo-call-leads", CreateBeosLeads)
+
+
+  router.post("/create-deo-call-leads", CreateDeosLeads)
+
+
+  
   router.post("/get-call-leads", GetCallLeadsByUserObjectId)
 
 

@@ -286,6 +286,11 @@ export const CreatePrincipalCallLeads = async (req, res) => {
 
 
 
+
+
+
+
+
 export const CreateABRCLeads = async (req, res) => {
   try {
     // 1) unique ABRC list (trimmed, prefer isCluster:true)
@@ -520,10 +525,458 @@ export const CreateABRCLeads = async (req, res) => {
 
 
 
+export const CreateBeosLeads = async (req, res) => {
+
+console.log('hello beos call leads')
+
+  try {
+    // 1) unique BEO list (trimmed, prefer isCluster:true)
+    const uniqueBeo = await District_Block_School.aggregate([
+      {
+        $addFields: {
+          beoContactTrimmed: {
+            $trim: { input: { $ifNull: ["$beoContact", ""] } }
+          }
+        }
+      },
+      { $match: { beoContactTrimmed: { $nin: [null, ""] } } },
+      { $sort: { beoContactTrimmed: 1, isCluster: -1, updatedAt: -1 } },
+      {
+        $group: {
+          _id: "$beoContactTrimmed",
+          docId: { $first: "$_id" },
+          beo: { $first: "$beo" },
+          beoContact: { $first: "$beoContactTrimmed" },
+          isCluster: { $first: "$isCluster" },
+          districtId: { $first: "$districtId" },
+          blockId: { $first: "$blockId" },
+          blockName: { $first: "$blockName" }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          beoContactKey: "$_id",
+          docId: 1,
+          beo: 1,
+          beoContact: 1,
+          isCluster: 1,
+          districtId: 1,
+          blockId: 1,
+          blockName: 1
+        }
+      }
+    ]);
+
+    const uniqueCount = uniqueBeo.length;
+    if (uniqueCount === 0) {
+      return res.status(200).json({
+        status: "oK",
+        message: "No unique BEO contacts found (non-empty).",
+        uniqueBeoCount: 0,
+        created: 0,
+        inserted: []
+      });
+    }
+
+    // 2) For each unique BEO, find one caller (if any), build doc (caller may be null)
+    const CONCURRENCY = 50;
+    const chunks = [];
+    for (let i = 0; i < uniqueBeo.length; i += CONCURRENCY) {
+      chunks.push(uniqueBeo.slice(i, i + CONCURRENCY));
+    }
+
+    const candidateDocs = [];
+    const skippedNoDocId = [];
+    let nullCallerCount = 0;
+    let rejectedCallerByDesignation = 0;
+
+    for (const chunk of chunks) {
+      const promises = chunk.map(async (rep) => {
+        // require docId and blockId; if missing, skip
+        if (!rep.docId || !rep.blockId) {
+          skippedNoDocId.push({ beoContact: rep.beoContact, docId: rep.docId, blockId: rep.blockId });
+          return null;
+        }
+
+        // Try to find a UserAccess for blockId
+        const ua = await UserAccess.findOne({ "region.blockIds.blockId": rep.blockId }, { unqUserObjectId: 1 }).lean();
+
+        let callerUser = null;
+        if (ua && ua.unqUserObjectId) {
+          const foundUser = await User.findOne({ _id: ua.unqUserObjectId }).lean();
+          // accept only if designation === "ABRC"
+          if (foundUser && foundUser.designation === "ABRC") {
+            callerUser = foundUser;
+          } else {
+            // user found but not a ABRC -> reject as caller
+            rejectedCallerByDesignation++;
+            callerUser = null;
+          }
+        }
+
+        // convert docId to ObjectId (school id)
+        let objectIdOfCalledPerson = null;
+        try {
+          objectIdOfCalledPerson =
+            rep.docId instanceof mongoose.Types.ObjectId ? rep.docId : new mongoose.Types.ObjectId(String(rep.docId));
+        } catch (e) {
+          objectIdOfCalledPerson = null;
+        }
+
+        // convert caller id if available, else null
+        let objectIdOfCaller = null;
+        if (callerUser && callerUser._id) {
+          try {
+            objectIdOfCaller =
+              callerUser._id instanceof mongoose.Types.ObjectId
+                ? callerUser._id
+                : new mongoose.Types.ObjectId(String(callerUser._id));
+          } catch (e) {
+            objectIdOfCaller = null;
+          }
+        } else {
+          objectIdOfCaller = null; // explicit null when no (valid) caller found
+        }
+
+        // build doc (objectIdOfCaller may be null)
+        if (!objectIdOfCalledPerson) {
+          // skip if called person id can't be resolved
+          skippedNoDocId.push({ beoContact: rep.beoContact, docId: rep.docId, blockId: rep.blockId });
+          return null;
+        }
+
+        if (!objectIdOfCaller) nullCallerCount++;
+
+        const doc = {
+          objectIdOfCalledPerson,
+          objectIdOfCaller, // possibly null
+          callMadeTo: "BEO",
+          districtId: rep.districtId || null,
+          blockId: rep.blockId || null,
+          centerId: null, // BEOs are block level, no centerId
+          callType: null,
+          callingStatus: null,
+          callingRemark1: null,
+          callingRemark2: null,
+          mannualRemark: null,
+          callingDate: new Date()
+        };
+
+        return doc;
+      });
+
+      const results = await Promise.all(promises);
+      results.forEach((r) => {
+        if (r) candidateDocs.push(r);
+      });
+    }
+
+    // 3) Remove those already present (objectIdOfCalledPerson + callMadeTo:"BEO"), to avoid duplicates
+    const calledIds = candidateDocs.map((c) => c.objectIdOfCalledPerson).filter(Boolean);
+    const existing = await CallLeads.find(
+      { objectIdOfCalledPerson: { $in: calledIds }, callMadeTo: "BEO" },
+      { objectIdOfCalledPerson: 1 }
+    ).lean();
+    const existingSet = new Set((existing || []).map((e) => String(e.objectIdOfCalledPerson)));
+
+    const toInsert = candidateDocs.filter((c) => !existingSet.has(String(c.objectIdOfCalledPerson)));
+
+    const stats = {
+      uniqueBeoCount: uniqueCount,
+      candidateCount: candidateDocs.length,
+      toInsertCount: toInsert.length,
+      skippedDueToMissingDocId: skippedNoDocId.length,
+      nullCallerCount: candidateDocs.filter((c) => c.objectIdOfCaller == null).length,
+      rejectedCallerByDesignation
+    };
+
+    if (toInsert.length === 0) {
+      return res.status(200).json({
+        status: "oK",
+        message: "No BEO leads to insert (either already exist or missing docId).",
+        stats
+      });
+    }
+
+    // 4) Insert documents using raw collection API to allow null objectIdOfCaller (bypasses Mongoose validation)
+    let inserted = [];
+    try {
+      const insertResult = await CallLeads.collection.insertMany(
+        toInsert.map((d) => {
+          return {
+            ...d,
+            objectIdOfCalledPerson: d.objectIdOfCalledPerson ? d.objectIdOfCalledPerson : null,
+            objectIdOfCaller: d.objectIdOfCaller ? d.objectIdOfCaller : null,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          };
+        }),
+        { ordered: false }
+      );
+
+      inserted = insertResult.insertedCount ? Object.values(insertResult.insertedIds).map((id) => ({ _id: id })) : [];
+    } catch (insertErr) {
+      if (insertErr && insertErr.result && insertErr.result.insertedIds) {
+        const ids = Object.values(insertErr.result.insertedIds);
+        inserted = ids.map((id) => ({ _id: id }));
+      } else {
+        console.error("Insert error (raw collection):", insertErr);
+      }
+
+      const writeErrors = insertErr && insertErr.writeErrors ? insertErr.writeErrors.map((we) => ({ index: we.index, errmsg: we.errmsg })) : null;
+
+      return res.status(500).json({
+        status: "error",
+        message: "Some BEO leads failed to insert (raw collection insert).",
+        stats,
+        attemptedToInsert: toInsert.length,
+        insertedCount: Array.isArray(inserted) ? inserted.length : 0,
+        inserted,
+        writeErrors
+      });
+    }
+
+    // 5) success response
+    return res.status(200).json({
+      status: "oK",
+      message: "BEO leads created (objectIdOfCaller may be null for some leads).",
+      stats,
+      created: Array.isArray(inserted) ? inserted.length : 0,
+      inserted
+    });
+  } catch (error) {
+    console.error("CreateBeosLeads error:", error);
+    return res.status(500).json({ status: "error", message: error.message || "Server error" });
+  }
+};
 
 
 
 
+
+
+export const CreateDeosLeads = async (req, res) => {
+
+  console.log('hello deos call leads')
+
+  try {
+    // 1) unique DEO list (trimmed)
+    const uniqueDeo = await District_Block_School.aggregate([
+      {
+        $addFields: {
+          deoContactTrimmed: {
+            $trim: { input: { $ifNull: ["$deoContact", ""] } }
+          }
+        }
+      },
+      { $match: { deoContactTrimmed: { $nin: [null, ""] } } },
+      { $sort: { deoContactTrimmed: 1, updatedAt: -1 } },
+      {
+        $group: {
+          _id: "$deoContactTrimmed",
+          docId: { $first: "$_id" },
+          deo: { $first: "$deo" },
+          deoContact: { $first: "$deoContactTrimmed" },
+          districtId: { $first: "$districtId" },
+          districtName: { $first: "$districtName" }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          deoContactKey: "$_id",
+          docId: 1,
+          deo: 1,
+          deoContact: 1,
+          districtId: 1,
+          districtName: 1
+        }
+      }
+    ]);
+
+    const uniqueCount = uniqueDeo.length;
+    if (uniqueCount === 0) {
+      return res.status(200).json({
+        status: "oK",
+        message: "No unique DEO contacts found (non-empty).",
+        uniqueDeoCount: 0,
+        created: 0,
+        inserted: []
+      });
+    }
+
+    // 2) For each unique DEO, find one caller (if any), build doc (caller may be null)
+    const CONCURRENCY = 50;
+    const chunks = [];
+    for (let i = 0; i < uniqueDeo.length; i += CONCURRENCY) {
+      chunks.push(uniqueDeo.slice(i, i + CONCURRENCY));
+    }
+
+    const candidateDocs = [];
+    const skippedNoDocId = [];
+    let nullCallerCount = 0;
+    let rejectedCallerByDesignation = 0;
+
+    for (const chunk of chunks) {
+      const promises = chunk.map(async (rep) => {
+        // require docId and districtId; if missing, skip
+        if (!rep.docId || !rep.districtId) {
+          skippedNoDocId.push({ deoContact: rep.deoContact, docId: rep.docId, districtId: rep.districtId });
+          return null;
+        }
+
+        // Try to find a UserAccess for districtId
+        const ua = await UserAccess.findOne({ "region.districtId": rep.districtId }, { unqUserObjectId: 1 }).lean();
+
+        let callerUser = null;
+        if (ua && ua.unqUserObjectId) {
+          const foundUser = await User.findOne({ _id: ua.unqUserObjectId }).lean();
+          // accept only if designation === "ABRC"
+          if (foundUser && foundUser.designation === "ABRC") {
+            callerUser = foundUser;
+          } else {
+            // user found but not a ABRC -> reject as caller
+            rejectedCallerByDesignation++;
+            callerUser = null;
+          }
+        }
+
+        // convert docId to ObjectId (school id)
+        let objectIdOfCalledPerson = null;
+        try {
+          objectIdOfCalledPerson =
+            rep.docId instanceof mongoose.Types.ObjectId ? rep.docId : new mongoose.Types.ObjectId(String(rep.docId));
+        } catch (e) {
+          objectIdOfCalledPerson = null;
+        }
+
+        // convert caller id if available, else null
+        let objectIdOfCaller = null;
+        if (callerUser && callerUser._id) {
+          try {
+            objectIdOfCaller =
+              callerUser._id instanceof mongoose.Types.ObjectId
+                ? callerUser._id
+                : new mongoose.Types.ObjectId(String(callerUser._id));
+          } catch (e) {
+            objectIdOfCaller = null;
+          }
+        } else {
+          objectIdOfCaller = null; // explicit null when no (valid) caller found
+        }
+
+        // build doc (objectIdOfCaller may be null)
+        if (!objectIdOfCalledPerson) {
+          // skip if called person id can't be resolved
+          skippedNoDocId.push({ deoContact: rep.deoContact, docId: rep.docId, districtId: rep.districtId });
+          return null;
+        }
+
+        if (!objectIdOfCaller) nullCallerCount++;
+
+        const doc = {
+          objectIdOfCalledPerson,
+          objectIdOfCaller, // possibly null
+          callMadeTo: "DEO",
+          districtId: rep.districtId || null,
+          blockId: null, // DEOs are district level, no blockId
+          centerId: null, // DEOs are district level, no centerId
+          callType: null,
+          callingStatus: null,
+          callingRemark1: null,
+          callingRemark2: null,
+          mannualRemark: null,
+          callingDate: new Date()
+        };
+
+        return doc;
+      });
+
+      const results = await Promise.all(promises);
+      results.forEach((r) => {
+        if (r) candidateDocs.push(r);
+      });
+    }
+
+    // 3) Remove those already present (objectIdOfCalledPerson + callMadeTo:"DEO"), to avoid duplicates
+    const calledIds = candidateDocs.map((c) => c.objectIdOfCalledPerson).filter(Boolean);
+    const existing = await CallLeads.find(
+      { objectIdOfCalledPerson: { $in: calledIds }, callMadeTo: "DEO" },
+      { objectIdOfCalledPerson: 1 }
+    ).lean();
+    const existingSet = new Set((existing || []).map((e) => String(e.objectIdOfCalledPerson)));
+
+    const toInsert = candidateDocs.filter((c) => !existingSet.has(String(c.objectIdOfCalledPerson)));
+
+    const stats = {
+      uniqueDeoCount: uniqueCount,
+      candidateCount: candidateDocs.length,
+      toInsertCount: toInsert.length,
+      skippedDueToMissingDocId: skippedNoDocId.length,
+      nullCallerCount: candidateDocs.filter((c) => c.objectIdOfCaller == null).length,
+      rejectedCallerByDesignation
+    };
+
+    if (toInsert.length === 0) {
+      return res.status(200).json({
+        status: "oK",
+        message: "No DEO leads to insert (either already exist or missing docId).",
+        stats
+      });
+    }
+
+    // 4) Insert documents using raw collection API to allow null objectIdOfCaller (bypasses Mongoose validation)
+    let inserted = [];
+    try {
+      const insertResult = await CallLeads.collection.insertMany(
+        toInsert.map((d) => {
+          return {
+            ...d,
+            objectIdOfCalledPerson: d.objectIdOfCalledPerson ? d.objectIdOfCalledPerson : null,
+            objectIdOfCaller: d.objectIdOfCaller ? d.objectIdOfCaller : null,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          };
+        }),
+        { ordered: false }
+      );
+
+      inserted = insertResult.insertedCount ? Object.values(insertResult.insertedIds).map((id) => ({ _id: id })) : [];
+    } catch (insertErr) {
+      if (insertErr && insertErr.result && insertErr.result.insertedIds) {
+        const ids = Object.values(insertErr.result.insertedIds);
+        inserted = ids.map((id) => ({ _id: id }));
+      } else {
+        console.error("Insert error (raw collection):", insertErr);
+      }
+
+      const writeErrors = insertErr && insertErr.writeErrors ? insertErr.writeErrors.map((we) => ({ index: we.index, errmsg: we.errmsg })) : null;
+
+      return res.status(500).json({
+        status: "error",
+        message: "Some DEO leads failed to insert (raw collection insert).",
+        stats,
+        attemptedToInsert: toInsert.length,
+        insertedCount: Array.isArray(inserted) ? inserted.length : 0,
+        inserted,
+        writeErrors
+      });
+    }
+
+    // 5) success response
+    return res.status(200).json({
+      status: "oK",
+      message: "DEO leads created (objectIdOfCaller may be null for some leads).",
+      stats,
+      created: Array.isArray(inserted) ? inserted.length : 0,
+      inserted
+    });
+  } catch (error) {
+    console.error("CreateDeosLeads error:", error);
+    return res.status(500).json({ status: "error", message: error.message || "Server error" });
+  }
+};
 
 
 
@@ -673,6 +1126,169 @@ export const CreateABRCLeads = async (req, res) => {
 
 
 
+// export const GetCallLeadsByUserObjectId = async (req, res) => {
+
+//   try {
+
+//     const { objectIdOfCaller, callMadeTo } = req.body;
+//     console.log(req.body)
+
+//     // Validate required input
+//     if (!callMadeTo) {
+//       return res.status(400).json({ status: "error", message: "callMadeTo is required in body" });
+
+//     }
+
+//     // Build match stage
+//     const match = { callMadeTo };
+
+//     // add 5-day filter (from now)
+//     const now = new Date();
+//     const fiveDaysAgo = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
+//     match.callingDate = { $gte: fiveDaysAgo };
+
+//     if (objectIdOfCaller !== undefined && objectIdOfCaller !== null && String(objectIdOfCaller).trim() !== "") {
+//       try {
+//         match.objectIdOfCaller = new mongoose.Types.ObjectId(String(objectIdOfCaller));
+//       } catch (err) {
+//         return res.status(400).json({ status: "error", message: "Invalid objectIdOfCaller" });
+//       }
+//     } else {
+//       // if objectIdOfCaller not provided, we match all leads for the given callMadeTo within last 5 days
+//       // (if you want to require objectIdOfCaller, uncomment below)
+//       // return res.status(400).json({ status: "error", message: "objectIdOfCaller is required" });
+//     }
+
+//     const pipeline = [
+//       { $match: match },
+
+//       // lookup caller user details
+//       {
+//         $lookup: {
+//           from: "users",
+//           localField: "objectIdOfCaller",
+//           foreignField: "_id",
+//           as: "callerUser"
+//         }
+//       },
+//       { $unwind: { path: "$callerUser", preserveNullAndEmptyArrays: true } },
+
+//       // lookup useraccesses for the caller (by unqUserObjectId)
+//       {
+//         $lookup: {
+//           from: "useraccesses",
+//           localField: "objectIdOfCaller",
+//           foreignField: "unqUserObjectId",
+//           as: "callerAccesses"
+//         }
+//       },
+//       // callerAccesses may be array; keep as array
+
+//       // lookup details about the called person: district_block_schools doc
+//       {
+//         $lookup: {
+//           from: "district_block_schools",
+//           localField: "objectIdOfCalledPerson",
+//           foreignField: "_id",
+//           as: "calledSchool"
+//         }
+//       },
+//       { $unwind: { path: "$calledSchool", preserveNullAndEmptyArrays: true } },
+
+//       // lookup for calledPersonRegion based on abrcContact
+//       {
+//         $lookup: {
+//           from: "district_block_schools",
+//           let: { abrcContact: "$calledSchool.abrcContact" },
+//           pipeline: [
+//             {
+//               $match: {
+//                 $expr: {
+//                   $and: [
+//                     { $eq: ["$abrcContact", "$$abrcContact"] },
+//                     { $ne: ["$abrcContact", null] },
+//                     { $ne: ["$abrcContact", ""] }
+//                   ]
+//                 }
+//               }
+//             }
+//           ],
+//           as: "calledPersonRegion"
+//         }
+//       },
+
+//       // project friendly output
+//       {
+//         $project: {
+//           _id: 1,
+//           callMadeTo: 1,
+//           districtId: 1,
+//           blockId: 1,
+//           centerId: 1,
+//           callType: 1,
+//           callingStatus: 1,
+//           callingRemark1: 1,
+//           callingRemark2: 1,
+//           mannualRemark: 1,
+//           callingDate: 1,
+//           createdAt: 1,
+//           updatedAt: 1,
+
+//           // caller user summary (may be null)
+//           callerUser: {
+//             _id: "$callerUser._id",
+//             userName: "$callerUser.userName",
+//             designation: "$callerUser.designation",
+//             mobile: "$callerUser.mobile",
+//             createdAt: "$callerUser.createdAt",
+//             updatedAt: "$callerUser.updatedAt"
+//           },
+
+//           // caller accesses array
+//           callerAccesses: 1, // raw useraccess documents (region array inside)
+
+//           // called school summary (may be null)
+//           calledPerson: {
+//             _id: "$calledSchool._id",
+//             districtId: "$calledSchool.districtId",
+//             districtName: "$calledSchool.districtName",
+//             blockId: "$calledSchool.blockId",
+//             blockName: "$calledSchool.blockName",
+//             centerId: "$calledSchool.centerId",
+//             centerName: "$calledSchool.centerName",
+//             principal: "$calledSchool.principal",
+//             princiaplContact: "$calledSchool.princiaplContact",
+//             abrc: "$calledSchool.abrc",
+//             abrcContact: "$calledSchool.abrcContact",
+//             isCluster: "$calledSchool.isCluster"
+//           },
+
+//           // called person region - all schools with same abrcContact
+//           calledPersonRegion: 1
+//         }
+//       },
+
+//       // sort newest first
+//       { $sort: { callingDate: -1, createdAt: -1 } }
+//     ];
+
+
+//     const data = await CallLeads.aggregate(pipeline);
+
+//     return res.status(200).json({
+//       status: "oK",
+//       count: Array.isArray(data) ? data.length : 0,
+//       data
+//     });
+//   } catch (error) {
+//     console.error("GetCallLeadsByUserObjectId error:", error);
+//     return res.status(500).json({ status: "error", message: error.message || "Server error" });
+//   }
+// };
+
+
+
+
 export const GetCallLeadsByUserObjectId = async (req, res) => {
 
   try {
@@ -742,20 +1358,55 @@ export const GetCallLeadsByUserObjectId = async (req, res) => {
       },
       { $unwind: { path: "$calledSchool", preserveNullAndEmptyArrays: true } },
 
-      // lookup for calledPersonRegion based on abrcContact
+      // DYNAMIC: lookup for calledPersonRegion based on callMadeTo
       {
         $lookup: {
           from: "district_block_schools",
-          let: { abrcContact: "$calledSchool.abrcContact" },
+          let: { 
+            callMadeTo: "$callMadeTo",
+            abrcContact: "$calledSchool.abrcContact",
+            beoContact: "$calledSchool.beoContact",
+            deoContact: "$calledSchool.deoContact"
+          },
           pipeline: [
             {
               $match: {
                 $expr: {
-                  $and: [
-                    { $eq: ["$abrcContact", "$$abrcContact"] },
-                    { $ne: ["$abrcContact", null] },
-                    { $ne: ["$abrcContact", ""] }
-                  ]
+                  $cond: {
+                    if: { $eq: ["$$callMadeTo", "ABRC"] },
+                    then: {
+                      $and: [
+                        { $eq: ["$abrcContact", "$$abrcContact"] },
+                        { $ne: ["$abrcContact", null] },
+                        { $ne: ["$abrcContact", ""] }
+                      ]
+                    },
+                    else: {
+                      $cond: {
+                        if: { $eq: ["$$callMadeTo", "BEO"] },
+                        then: {
+                          $and: [
+                            { $eq: ["$beoContact", "$$beoContact"] },
+                            { $ne: ["$beoContact", null] },
+                            { $ne: ["$beoContact", ""] }
+                          ]
+                        },
+                        else: {
+                          $cond: {
+                            if: { $eq: ["$$callMadeTo", "DEO"] },
+                            then: {
+                              $and: [
+                                { $eq: ["$deoContact", "$$deoContact"] },
+                                { $ne: ["$deoContact", null] },
+                                { $ne: ["$deoContact", ""] }
+                              ]
+                            },
+                            else: { $eq: [1, 1] } // default match all if unknown callMadeTo
+                          }
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -807,10 +1458,14 @@ export const GetCallLeadsByUserObjectId = async (req, res) => {
             princiaplContact: "$calledSchool.princiaplContact",
             abrc: "$calledSchool.abrc",
             abrcContact: "$calledSchool.abrcContact",
+            beo: "$calledSchool.beo",
+            beoContact: "$calledSchool.beoContact",
+            deo: "$calledSchool.deo",
+            deoContact: "$calledSchool.deoContact",
             isCluster: "$calledSchool.isCluster"
           },
 
-          // called person region - all schools with same abrcContact
+          // called person region - all schools with same contact based on callMadeTo
           calledPersonRegion: 1
         }
       },
@@ -832,8 +1487,6 @@ export const GetCallLeadsByUserObjectId = async (req, res) => {
     return res.status(500).json({ status: "error", message: error.message || "Server error" });
   }
 };
-
-
 
 
 //Get district_block_schools by contact numbers
