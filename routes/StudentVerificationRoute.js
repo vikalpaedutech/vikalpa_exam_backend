@@ -2,7 +2,10 @@
 
 import express from "express";
 
-import { GetStudentdsDataForVerification, UpdateStudentVerification } from "../controllers/StudentVerificationController.js";
+import { GetStudentdsDataForVerification, UpdateStudentVerification,
+BulkUploadVerification
+
+ } from "../controllers/StudentVerificationController.js";
 
 //creating express router.
 
@@ -13,5 +16,9 @@ const router = express.Router();
 router.post('/get-student-data-for-verification',  GetStudentdsDataForVerification);
 
 router.patch('/patch-student-data-for-verification',  UpdateStudentVerification);
+
+
+
+router.post('/get-bulk-verification-data',  BulkUploadVerification);
 
 export default router;
