@@ -2,7 +2,8 @@
 import mongoose from "mongoose";
 import { Student } from "../models/StudentModel.js"; // adjust path if needed
 import { District_Block_School } from "../models/District_block_schoolsModel.js";
-
+import { UserAccess, User } from "../models/UserModel.js";
+import { CallLeads } from "../models/CallLeadsModel.js";
 // Aggregation for 8th Class Dashboard with sorting
 
 
@@ -912,5 +913,918 @@ export const MainDashBoard = async (req, res) => {
   } catch (error) {
     console.error("Error", error);
     res.status(500).json({ status: "error", message: error.message || "Server error" });
+  }
+};
+
+
+
+
+
+
+
+
+// export const getCallSummary = async (req, res) => {
+//   try {
+//     const { callMadeTo, startDate, endDate, districtId, blockId } = req.body;
+
+//     console.log('=== REQUEST BODY ===', req.body);
+
+//     // Validate required field
+//     if (!callMadeTo) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "callMadeTo is required in request body"
+//       });
+//     }
+
+//     // Validate callMadeTo value
+//     const validCallMadeTo = ["Principal", "ABRC", "BEO", "DEO"];
+//     if (!validCallMadeTo.includes(callMadeTo)) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "callMadeTo must be one of: Principal, ABRC, BEO, DEO"
+//       });
+//     }
+
+//     // Build location filter
+//     const locationFilter = {};
+//     if (districtId) locationFilter.districtId = districtId;
+//     if (blockId) locationFilter.blockId = blockId;
+
+//     console.log('=== LOCATION FILTER ===', locationFilter);
+
+//     // DEBUG: First check ALL schools without contact filter
+//     const allSchools = await District_Block_School.find(locationFilter).limit(5);
+//     console.log('=== ALL SCHOOLS SAMPLE ===', allSchools.length);
+//     allSchools.forEach(school => {
+//       console.log(`School: ${school.centerName}, District: ${school.districtId}, Block: ${school.blockId}`);
+//       console.log(`Principal: ${school.principal}, Contact: ${school.principalContact}`);
+//       console.log(`ABRC: ${school.abrc}, Contact: ${school.abrcContact}`);
+//       console.log(`BEO: ${school.beo}, Contact: ${school.beoContact}`);
+//       console.log(`DEO: ${school.deo}, Contact: ${school.deoContact}`);
+//       console.log('---');
+//     });
+
+//     // FIXED: Use proper field names based on your actual data structure
+//     let contactField, nameField;
+    
+//     switch(callMadeTo) {
+//       case "Principal":
+//         contactField = "princiaplContact"; // Note: Your data has typo "princiaplContact"
+//         nameField = "principal";
+//         break;
+//       case "ABRC":
+//         contactField = "abrcContact";
+//         nameField = "abrc";
+//         break;
+//       case "BEO":
+//         contactField = "beoContact";
+//         nameField = "beo";
+//         break;
+//       case "DEO":
+//         contactField = "deoContact";
+//         nameField = "deo";
+//         break;
+//     }
+
+//     console.log(`=== USING FIELDS === Contact: ${contactField}, Name: ${nameField}`);
+
+//     // FIXED: Check schools with the correct contact field
+//     const schoolMatchFilter = {
+//       ...locationFilter,
+//       [contactField]: { $exists: true, $ne: null, $ne: "" }
+//     };
+
+//     console.log('=== SCHOOL MATCH FILTER ===', schoolMatchFilter);
+
+//     const debugSchools = await District_Block_School.find(schoolMatchFilter).limit(5);
+//     console.log('=== DEBUG SCHOOLS FOUND ===', debugSchools.length);
+//     debugSchools.forEach(school => {
+//       console.log(`School: ${school.centerName}, District: ${school.districtId}, Block: ${school.blockId}`);
+//       console.log(`Contact: ${school[contactField]}, Name: ${school[nameField]}`);
+//     });
+
+//     // Get counts from District_Block_School collection - FIXED FIELD NAMES
+//     const schoolAggregate = await District_Block_School.aggregate([
+//       {
+//         $match: schoolMatchFilter
+//       },
+//       {
+//         $group: {
+//           _id: {
+//             districtId: "$districtId",
+//             districtName: "$districtName",
+//             blockId: "$blockId",
+//             blockName: "$blockName"
+//           },
+//           totalCount: { $sum: 1 },
+//           uniqueContacts: {
+//             $addToSet: `$${contactField}`
+//           }
+//         }
+//       },
+//       {
+//         $project: {
+//           _id: 0,
+//           districtId: "$_id.districtId",
+//           districtName: "$_id.districtName",
+//           blockId: "$_id.blockId",
+//           blockName: "$_id.blockName",
+//           totalCount: 1,
+//           uniqueContactCount: { $size: "$uniqueContacts" }
+//         }
+//       },
+//       { $sort: { districtId: 1, blockId: 1 } }
+//     ]);
+
+//     console.log('=== SCHOOL AGGREGATE RESULT ===', schoolAggregate);
+
+//     // Get call statistics from CallLeads collection
+//     const callMatchFilter = {
+//       callMadeTo: callMadeTo,
+//       ...locationFilter,
+//       isActive: true
+//     };
+
+//     if (startDate || endDate) {
+//       callMatchFilter.callingDate = {};
+//       if (startDate) callMatchFilter.callingDate.$gte = new Date(startDate);
+//       if (endDate) callMatchFilter.callingDate.$lte = new Date(endDate);
+//     }
+
+//     const callStatsAggregate = await CallLeads.aggregate([
+//       {
+//         $match: callMatchFilter
+//       },
+//       {
+//         $group: {
+//           _id: {
+//             districtId: "$districtId",
+//             blockId: "$blockId"
+//           },
+//           totalCallsAssigned: { $sum: 1 },
+//           connectedCalls: {
+//             $sum: { $cond: [{ $eq: ["$callingStatus", "Connected"] }, 1, 0] }
+//           },
+//           notConnectedCalls: {
+//             $sum: { $cond: [{ $eq: ["$callingStatus", "Not connected"] }, 1, 0] }
+//           },
+//           pendingCalls: {
+//             $sum: {
+//               $cond: [
+//                 { $or: [{ $eq: ["$callingStatus", null] }, { $eq: ["$callingStatus", ""] }] },
+//                 1,
+//                 0
+//               ]
+//             }
+//           }
+//         }
+//       },
+//       {
+//         $project: {
+//           _id: 0,
+//           districtId: "$_id.districtId",
+//           blockId: "$_id.blockId",
+//           totalCallsAssigned: 1,
+//           connectedCalls: 1,
+//           notConnectedCalls: 1,
+//           pendingCalls: 1
+//         }
+//       },
+//       { $sort: { districtId: 1, blockId: 1 } }
+//     ]);
+
+//     console.log('=== CALL STATS AGGREGATE RESULT ===', callStatsAggregate.length, 'records');
+
+//     // Combine both results
+//     const combinedResult = schoolAggregate.map(schoolItem => {
+//       const callStats = callStatsAggregate.find(
+//         callItem =>
+//           callItem.districtId === schoolItem.districtId &&
+//           callItem.blockId === schoolItem.blockId
+//       );
+
+//       return {
+//         districtId: schoolItem.districtId,
+//         districtName: schoolItem.districtName,
+//         blockId: schoolItem.blockId,
+//         blockName: schoolItem.blockName,
+//         summary: {
+//           totalPersons: schoolItem.totalCount,
+//           uniqueContacts: schoolItem.uniqueContactCount,
+//           calls: {
+//             totalAssigned: callStats?.totalCallsAssigned || 0,
+//             connected: callStats?.connectedCalls || 0,
+//             notConnected: callStats?.notConnectedCalls || 0,
+//             pending: callStats?.pendingCalls || 0
+//           }
+//         }
+//       };
+//     });
+
+//     console.log('=== COMBINED RESULT ===', combinedResult);
+
+//     // Calculate overall totals
+//     const overallTotals = {
+//       totalPersons: combinedResult.reduce((sum, item) => sum + item.summary.totalPersons, 0),
+//       uniqueContacts: combinedResult.reduce((sum, item) => sum + item.summary.uniqueContacts, 0),
+//       totalAssigned: combinedResult.reduce((sum, item) => sum + item.summary.calls.totalAssigned, 0),
+//       connected: combinedResult.reduce((sum, item) => sum + item.summary.calls.connected, 0),
+//       notConnected: combinedResult.reduce((sum, item) => sum + item.summary.calls.notConnected, 0),
+//       pending: combinedResult.reduce((sum, item) => sum + item.summary.calls.pending, 0)
+//     };
+
+//     res.status(200).json({
+//       success: true,
+//       data: {
+//         callMadeTo,
+//         dateRange: {
+//           startDate: startDate || "Not specified",
+//           endDate: endDate || "Not specified"
+//         },
+//         filters: {
+//           districtId: districtId || "All",
+//           blockId: blockId || "All"
+//         },
+//         summaryByDistrictBlock: combinedResult,
+//         overallSummary: overallTotals
+//       }
+//     });
+
+//   } catch (error) {
+//     console.error("Error in getCallSummary:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Internal server error",
+//       error: error.message
+//     });
+//   }
+// };
+
+
+
+
+
+
+
+// export const getCallSummary = async (req, res) => {
+//   try {
+//     const { callMadeTo, startDate, endDate, districtId, blockId } = req.body;
+
+//     console.log('=== REQUEST BODY ===', req.body);
+
+//     // Validate required field
+//     if (!callMadeTo) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "callMadeTo is required in request body"
+//       });
+//     }
+
+//     // Validate callMadeTo value
+//     const validCallMadeTo = ["Principal", "ABRC", "BEO", "DEO"];
+//     if (!validCallMadeTo.includes(callMadeTo)) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "callMadeTo must be one of: Principal, ABRC, BEO, DEO"
+//       });
+//     }
+
+//     // Build location filter
+//     const locationFilter = {};
+//     if (districtId) locationFilter.districtId = districtId;
+//     if (blockId) locationFilter.blockId = blockId;
+
+//     console.log('=== LOCATION FILTER ===', locationFilter);
+
+//     // DEBUG: First check ALL schools without contact filter
+//     const allSchools = await District_Block_School.find(locationFilter).limit(5);
+//     console.log('=== ALL SCHOOLS SAMPLE ===', allSchools.length);
+//     allSchools.forEach(school => {
+//       console.log(`School: ${school.centerName}, District: ${school.districtId}, Block: ${school.blockId}`);
+//       console.log(`Principal: ${school.principal}, Contact: ${school.principalContact}`);
+//       console.log(`ABRC: ${school.abrc}, Contact: ${school.abrcContact}`);
+//       console.log(`BEO: ${school.beo}, Contact: ${school.beoContact}`);
+//       console.log(`DEO: ${school.deo}, Contact: ${school.deoContact}`);
+//       console.log('---');
+//     });
+
+//     // FIXED: Use proper field names based on your actual data structure
+//     let contactField, nameField;
+    
+//     switch(callMadeTo) {
+//       case "Principal":
+//         contactField = "princiaplContact"; // Note: Your data has typo "princiaplContact"
+//         nameField = "principal";
+//         break;
+//       case "ABRC":
+//         contactField = "abrcContact";
+//         nameField = "abrc";
+//         break;
+//       case "BEO":
+//         contactField = "beoContact";
+//         nameField = "beo";
+//         break;
+//       case "DEO":
+//         contactField = "deoContact";
+//         nameField = "deo";
+//         break;
+//     }
+
+//     console.log(`=== USING FIELDS === Contact: ${contactField}, Name: ${nameField}`);
+
+//     // FIXED: Check schools with the correct contact field
+//     const schoolMatchFilter = {
+//       ...locationFilter,
+//       [contactField]: { $exists: true, $ne: null, $ne: "" }
+//     };
+
+//     console.log('=== SCHOOL MATCH FILTER ===', schoolMatchFilter);
+
+//     const debugSchools = await District_Block_School.find(schoolMatchFilter).limit(5);
+//     console.log('=== DEBUG SCHOOLS FOUND ===', debugSchools.length);
+//     debugSchools.forEach(school => {
+//       console.log(`School: ${school.centerName}, District: ${school.districtId}, Block: ${school.blockId}`);
+//       console.log(`Contact: ${school[contactField]}, Name: ${school[nameField]}`);
+//     });
+
+//     // Get user data based on callMadeTo type
+//     let userDesignation, userAccessFilter;
+    
+//     if (callMadeTo === "Principal" || callMadeTo === "ABRC") {
+//       userDesignation = "Center Coordinator";
+//     } else if (callMadeTo === "BEO") {
+//       userDesignation = "ACI";
+//     }
+
+//     console.log(`=== USER CONFIG === Designation: ${userDesignation}`);
+
+//     // Get users with their access data
+//     let assignedUsers = [];
+//     if (userDesignation) {
+//       assignedUsers = await User.aggregate([
+//         {
+//           $match: { designation: userDesignation }
+//         },
+//         {
+//           $lookup: {
+//             from: "useraccesses",
+//             localField: "_id",
+//             foreignField: "unqUserObjectId",
+//             as: "accessData"
+//           }
+//         },
+//         {
+//           $unwind: {
+//             path: "$accessData",
+//             preserveNullAndEmptyArrays: true
+//           }
+//         },
+//         {
+//           $unwind: {
+//             path: "$accessData.region",
+//             preserveNullAndEmptyArrays: true
+//           }
+//         },
+//         {
+//           $unwind: {
+//             path: "$accessData.region.blockIds",
+//             preserveNullAndEmptyArrays: true
+//           }
+//         },
+//         {
+//           $project: {
+//             _id: 1,
+//             userName: 1,
+//             designation: 1,
+//             mobile: 1,
+//             districtId: "$accessData.region.districtId",
+//             blockId: "$accessData.region.blockIds.blockId"
+//           }
+//         }
+//       ]);
+
+//       console.log(`=== ASSIGNED USERS FOUND ===`, assignedUsers.length);
+//       console.log('Sample assigned users:', assignedUsers.slice(0, 3));
+//     }
+
+//     // Get counts from District_Block_School collection - FIXED FIELD NAMES
+//     const schoolAggregate = await District_Block_School.aggregate([
+//       {
+//         $match: schoolMatchFilter
+//       },
+//       {
+//         $group: {
+//           _id: {
+//             districtId: "$districtId",
+//             districtName: "$districtName",
+//             blockId: "$blockId",
+//             blockName: "$blockName"
+//           },
+//           totalCount: { $sum: 1 },
+//           uniqueContacts: {
+//             $addToSet: `$${contactField}`
+//           }
+//         }
+//       },
+//       {
+//         $project: {
+//           _id: 0,
+//           districtId: "$_id.districtId",
+//           districtName: "$_id.districtName",
+//           blockId: "$_id.blockId",
+//           blockName: "$_id.blockName",
+//           totalCount: 1,
+//           uniqueContactCount: { $size: "$uniqueContacts" }
+//         }
+//       },
+//       { $sort: { districtId: 1, blockId: 1 } }
+//     ]);
+
+//     console.log('=== SCHOOL AGGREGATE RESULT ===', schoolAggregate);
+
+//     // Get call statistics from CallLeads collection
+//     const callMatchFilter = {
+//       callMadeTo: callMadeTo,
+//       ...locationFilter,
+//       isActive: true
+//     };
+
+//     if (startDate || endDate) {
+//       callMatchFilter.callingDate = {};
+//       if (startDate) callMatchFilter.callingDate.$gte = new Date(startDate);
+//       if (endDate) callMatchFilter.callingDate.$lte = new Date(endDate);
+//     }
+
+//     const callStatsAggregate = await CallLeads.aggregate([
+//       {
+//         $match: callMatchFilter
+//       },
+//       {
+//         $group: {
+//           _id: {
+//             districtId: "$districtId",
+//             blockId: "$blockId"
+//           },
+//           totalCallsAssigned: { $sum: 1 },
+//           connectedCalls: {
+//             $sum: { $cond: [{ $eq: ["$callingStatus", "Connected"] }, 1, 0] }
+//           },
+//           notConnectedCalls: {
+//             $sum: { $cond: [{ $eq: ["$callingStatus", "Not connected"] }, 1, 0] }
+//           },
+//           pendingCalls: {
+//             $sum: {
+//               $cond: [
+//                 { $or: [{ $eq: ["$callingStatus", null] }, { $eq: ["$callingStatus", ""] }] },
+//                 1,
+//                 0
+//               ]
+//             }
+//           }
+//         }
+//       },
+//       {
+//         $project: {
+//           _id: 0,
+//           districtId: "$_id.districtId",
+//           blockId: "$_id.blockId",
+//           totalCallsAssigned: 1,
+//           connectedCalls: 1,
+//           notConnectedCalls: 1,
+//           pendingCalls: 1
+//         }
+//       },
+//       { $sort: { districtId: 1, blockId: 1 } }
+//     ]);
+
+//     console.log('=== CALL STATS AGGREGATE RESULT ===', callStatsAggregate.length, 'records');
+
+//     // Combine both results and map assigned users
+//     const combinedResult = schoolAggregate.map(schoolItem => {
+//       const callStats = callStatsAggregate.find(
+//         callItem =>
+//           callItem.districtId === schoolItem.districtId &&
+//           callItem.blockId === schoolItem.blockId
+//       );
+
+//       // Find assigned users for this district-block combination
+//       let assignedCallers = [];
+//       if (userDesignation) {
+//         if (callMadeTo === "BEO") {
+//           // For BEO, match by district only
+//           assignedCallers = assignedUsers.filter(user => 
+//             user.districtId === schoolItem.districtId
+//           );
+//         } else {
+//           // For Principal and ABRC, match by district and block
+//           assignedCallers = assignedUsers.filter(user => 
+//             user.districtId === schoolItem.districtId && 
+//             user.blockId === schoolItem.blockId
+//           );
+//         }
+//       }
+
+//       // Remove duplicates and format caller info
+//       const uniqueCallers = Array.from(new Set(assignedCallers.map(user => user._id.toString())))
+//         .map(id => {
+//           const user = assignedCallers.find(u => u._id.toString() === id);
+//           return {
+//             userId: user._id,
+//             userName: user.userName,
+//             designation: user.designation,
+//             mobile: user.mobile
+//           };
+//         });
+
+//       return {
+//         districtId: schoolItem.districtId,
+//         districtName: schoolItem.districtName,
+//         blockId: schoolItem.blockId,
+//         blockName: schoolItem.blockName,
+//         assignedCallers: uniqueCallers.length > 0 ? uniqueCallers : [{ userName: "No caller assigned", designation: "", mobile: "" }],
+//         summary: {
+//           totalPersons: schoolItem.totalCount,
+//           uniqueContacts: schoolItem.uniqueContactCount,
+//           calls: {
+//             totalAssigned: callStats?.totalCallsAssigned || 0,
+//             connected: callStats?.connectedCalls || 0,
+//             notConnected: callStats?.notConnectedCalls || 0,
+//             pending: callStats?.pendingCalls || 0
+//           }
+//         }
+//       };
+//     });
+
+//     console.log('=== COMBINED RESULT ===', combinedResult);
+
+//     // Calculate overall totals
+//     const overallTotals = {
+//       totalPersons: combinedResult.reduce((sum, item) => sum + item.summary.totalPersons, 0),
+//       uniqueContacts: combinedResult.reduce((sum, item) => sum + item.summary.uniqueContacts, 0),
+//       totalAssigned: combinedResult.reduce((sum, item) => sum + item.summary.calls.totalAssigned, 0),
+//       connected: combinedResult.reduce((sum, item) => sum + item.summary.calls.connected, 0),
+//       notConnected: combinedResult.reduce((sum, item) => sum + item.summary.calls.notConnected, 0),
+//       pending: combinedResult.reduce((sum, item) => sum + item.summary.calls.pending, 0)
+//     };
+
+//     res.status(200).json({
+//       success: true,
+//       data: {
+//         callMadeTo,
+//         dateRange: {
+//           startDate: startDate || "Not specified",
+//           endDate: endDate || "Not specified"
+//         },
+//         filters: {
+//           districtId: districtId || "All",
+//           blockId: blockId || "All"
+//         },
+//         summaryByDistrictBlock: combinedResult,
+//         overallSummary: overallTotals
+//       }
+//     });
+
+//   } catch (error) {
+//     console.error("Error in getCallSummary:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Internal server error",
+//       error: error.message
+//     });
+//   }
+// };
+
+
+
+
+
+
+
+export const getCallSummary = async (req, res) => {
+  try {
+    const { callMadeTo, startDate, endDate, districtId, blockId } = req.body;
+
+    console.log('=== REQUEST BODY ===', req.body);
+
+    // Validate required field
+    if (!callMadeTo) {
+      return res.status(400).json({
+        success: false,
+        message: "callMadeTo is required in request body"
+      });
+    }
+
+    // Validate callMadeTo value
+    const validCallMadeTo = ["Principal", "ABRC", "BEO", "DEO"];
+    if (!validCallMadeTo.includes(callMadeTo)) {
+      return res.status(400).json({
+        success: false,
+        message: "callMadeTo must be one of: Principal, ABRC, BEO, DEO"
+      });
+    }
+
+    // Build location filter
+    const locationFilter = {};
+    if (districtId) locationFilter.districtId = districtId;
+    if (blockId) locationFilter.blockId = blockId;
+
+    console.log('=== LOCATION FILTER ===', locationFilter);
+
+    // DEBUG: First check ALL schools without contact filter
+    const allSchools = await District_Block_School.find(locationFilter).limit(5);
+    console.log('=== ALL SCHOOLS SAMPLE ===', allSchools.length);
+    allSchools.forEach(school => {
+      console.log(`School: ${school.centerName}, District: ${school.districtId}, Block: ${school.blockId}`);
+      console.log(`Principal: ${school.principal}, Contact: ${school.principalContact}`);
+      console.log(`ABRC: ${school.abrc}, Contact: ${school.abrcContact}`);
+      console.log(`BEO: ${school.beo}, Contact: ${school.beoContact}`);
+      console.log(`DEO: ${school.deo}, Contact: ${school.deoContact}`);
+      console.log('---');
+    });
+
+    // FIXED: Use proper field names based on your actual data structure
+    let contactField, nameField;
+    
+    switch(callMadeTo) {
+      case "Principal":
+        contactField = "princiaplContact"; // Note: Your data has typo "princiaplContact"
+        nameField = "principal";
+        break;
+      case "ABRC":
+        contactField = "abrcContact";
+        nameField = "abrc";
+        break;
+      case "BEO":
+        contactField = "beoContact";
+        nameField = "beo";
+        break;
+      case "DEO":
+        contactField = "deoContact";
+        nameField = "deo";
+        break;
+    }
+
+    console.log(`=== USING FIELDS === Contact: ${contactField}, Name: ${nameField}`);
+
+    // FIXED: Check schools with the correct contact field
+    const schoolMatchFilter = {
+      ...locationFilter,
+      [contactField]: { $exists: true, $ne: null, $ne: "" }
+    };
+
+    console.log('=== SCHOOL MATCH FILTER ===', schoolMatchFilter);
+
+    const debugSchools = await District_Block_School.find(schoolMatchFilter).limit(5);
+    console.log('=== DEBUG SCHOOLS FOUND ===', debugSchools.length);
+    debugSchools.forEach(school => {
+      console.log(`School: ${school.centerName}, District: ${school.districtId}, Block: ${school.blockId}`);
+      console.log(`Contact: ${school[contactField]}, Name: ${school[nameField]}`);
+    });
+
+    // Get user data based on callMadeTo type
+    let userDesignation, userAccessFilter;
+    
+    if (callMadeTo === "Principal" || callMadeTo === "ABRC") {
+      userDesignation = "Center Coordinator";
+    } else if (callMadeTo === "BEO") {
+      userDesignation = "ACI";
+    }
+
+    console.log(`=== USER CONFIG === Designation: ${userDesignation}`);
+
+    // Get users with their access data
+    let assignedUsers = [];
+    if (userDesignation) {
+      assignedUsers = await User.aggregate([
+        {
+          $match: { designation: userDesignation }
+        },
+        {
+          $lookup: {
+            from: "useraccesses",
+            localField: "_id",
+            foreignField: "unqUserObjectId",
+            as: "accessData"
+          }
+        },
+        {
+          $unwind: {
+            path: "$accessData",
+            preserveNullAndEmptyArrays: true
+          }
+        },
+        {
+          $unwind: {
+            path: "$accessData.region",
+            preserveNullAndEmptyArrays: true
+          }
+        },
+        {
+          $unwind: {
+            path: "$accessData.region.blockIds",
+            preserveNullAndEmptyArrays: true
+          }
+        },
+        {
+          $project: {
+            _id: 1,
+            userName: 1,
+            designation: 1,
+            mobile: 1,
+            districtId: "$accessData.region.districtId",
+            blockId: "$accessData.region.blockIds.blockId"
+          }
+        }
+      ]);
+
+      console.log(`=== ASSIGNED USERS FOUND ===`, assignedUsers.length);
+      console.log('Sample assigned users:', assignedUsers.slice(0, 3));
+    }
+
+    // Get counts from District_Block_School collection - FIXED FIELD NAMES
+    const schoolAggregate = await District_Block_School.aggregate([
+      {
+        $match: schoolMatchFilter
+      },
+      {
+        $group: {
+          _id: {
+            districtId: "$districtId",
+            districtName: "$districtName",
+            blockId: "$blockId",
+            blockName: "$blockName"
+          },
+          totalCount: { $sum: 1 },
+          uniqueContacts: {
+            $addToSet: `$${contactField}`
+          }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          districtId: "$_id.districtId",
+          districtName: "$_id.districtName",
+          blockId: "$_id.blockId",
+          blockName: "$_id.blockName",
+          totalCount: 1,
+          uniqueContactCount: { $size: "$uniqueContacts" }
+        }
+      },
+      { $sort: { districtId: 1, blockId: 1 } }
+    ]);
+
+    console.log('=== SCHOOL AGGREGATE RESULT ===', schoolAggregate);
+
+    // Get call statistics from CallLeads collection
+    const callMatchFilter = {
+      callMadeTo: callMadeTo,
+      ...locationFilter,
+      isActive: true
+    };
+
+    if (startDate || endDate) {
+      callMatchFilter.callingDate = {};
+      if (startDate) callMatchFilter.callingDate.$gte = new Date(startDate);
+      if (endDate) callMatchFilter.callingDate.$lte = new Date(endDate);
+    }
+
+    const callStatsAggregate = await CallLeads.aggregate([
+      {
+        $match: callMatchFilter
+      },
+      {
+        $group: {
+          _id: {
+            districtId: "$districtId",
+            blockId: "$blockId"
+          },
+          totalCallsAssigned: { $sum: 1 },
+          connectedCalls: {
+            $sum: { $cond: [{ $eq: ["$callingStatus", "Connected"] }, 1, 0] }
+          },
+          notConnectedCalls: {
+            $sum: { $cond: [{ $eq: ["$callingStatus", "Not connected"] }, 1, 0] }
+          },
+          pendingCalls: {
+            $sum: {
+              $cond: [
+                { $or: [{ $eq: ["$callingStatus", null] }, { $eq: ["$callingStatus", ""] }] },
+                1,
+                0
+              ]
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          districtId: "$_id.districtId",
+          blockId: "$_id.blockId",
+          totalCallsAssigned: 1,
+          connectedCalls: 1,
+          notConnectedCalls: 1,
+          pendingCalls: 1
+        }
+      },
+      { $sort: { districtId: 1, blockId: 1 } }
+    ]);
+
+    console.log('=== CALL STATS AGGREGATE RESULT ===', callStatsAggregate.length, 'records');
+
+    // Combine both results and map assigned users
+    const combinedResult = schoolAggregate.map(schoolItem => {
+      const callStats = callStatsAggregate.find(
+        callItem =>
+          callItem.districtId === schoolItem.districtId &&
+          callItem.blockId === schoolItem.blockId
+      );
+
+      // Find assigned users for this district-block combination
+      let assignedCallers = [];
+      if (userDesignation) {
+        if (callMadeTo === "BEO") {
+          // For BEO, match by district only - show all ACI users for this district
+          assignedCallers = assignedUsers.filter(user => 
+            user.districtId === schoolItem.districtId
+          );
+        } else {
+          // For Principal and ABRC, match by district and block - show Center Coordinators for this specific block
+          assignedCallers = assignedUsers.filter(user => 
+            user.districtId === schoolItem.districtId && 
+            user.blockId === schoolItem.blockId
+          );
+        }
+      }
+
+      // Remove duplicates and format caller info
+      const uniqueCallers = Array.from(new Set(assignedCallers.map(user => user._id.toString())))
+        .map(id => {
+          const user = assignedCallers.find(u => u._id.toString() === id);
+          return {
+            userId: user._id,
+            userName: user.userName,
+            designation: user.designation,
+            mobile: user.mobile
+          };
+        });
+
+      return {
+        districtId: schoolItem.districtId,
+        districtName: schoolItem.districtName,
+        blockId: schoolItem.blockId,
+        blockName: schoolItem.blockName,
+        assignedCallers: uniqueCallers.length > 0 ? uniqueCallers : [{ userName: "No caller assigned", designation: "", mobile: "" }],
+        summary: {
+          totalPersons: schoolItem.totalCount,
+          uniqueContacts: schoolItem.uniqueContactCount,
+          calls: {
+            totalAssigned: callStats?.totalCallsAssigned || 0,
+            connected: callStats?.connectedCalls || 0,
+            notConnected: callStats?.notConnectedCalls || 0,
+            pending: callStats?.pendingCalls || 0
+          }
+        }
+      };
+    });
+
+    console.log('=== COMBINED RESULT ===', combinedResult);
+
+    // Calculate overall totals
+    const overallTotals = {
+      totalPersons: combinedResult.reduce((sum, item) => sum + item.summary.totalPersons, 0),
+      uniqueContacts: combinedResult.reduce((sum, item) => sum + item.summary.uniqueContacts, 0),
+      totalAssigned: combinedResult.reduce((sum, item) => sum + item.summary.calls.totalAssigned, 0),
+      connected: combinedResult.reduce((sum, item) => sum + item.summary.calls.connected, 0),
+      notConnected: combinedResult.reduce((sum, item) => sum + item.summary.calls.notConnected, 0),
+      pending: combinedResult.reduce((sum, item) => sum + item.summary.calls.pending, 0)
+    };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        callMadeTo,
+        dateRange: {
+          startDate: startDate || "Not specified",
+          endDate: endDate || "Not specified"
+        },
+        filters: {
+          districtId: districtId || "All",
+          blockId: blockId || "All"
+        },
+        summaryByDistrictBlock: combinedResult,
+        overallSummary: overallTotals
+      }
+    });
+
+  } catch (error) {
+    console.error("Error in getCallSummary:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message
+    });
   }
 };

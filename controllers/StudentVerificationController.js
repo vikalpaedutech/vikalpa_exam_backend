@@ -5,9 +5,92 @@ import { District_Block_School } from "../models/District_block_schoolsModel.js"
 import { User } from "../models/UserModel.js";
 
 // Below api will be used to get students by verification users block id
+// export const GetStudentdsDataForVerification = async (req, res) => {
+//   try {
+//     const { schoolBlockCode, isRegisteredBy, isVerified, isBulkRegistered} = req.body;
+
+//     const query = {}
+
+//     if (schoolBlockCode) query.schoolBlockCode = schoolBlockCode;
+//     if (isRegisteredBy) query.isRegisteredBy = isRegisteredBy;
+//     if (isVerified) query.isVerified = isVerified;
+//     if (isBulkRegistered) query.isBulkRegistered = isBulkRegistered;
+
+//      console.log(query)
+
+//     // Basic validation
+//     if (!Array.isArray(schoolBlockCode) || schoolBlockCode.length === 0) {
+//       return res.status(400).json({
+//         ok: false,
+//         message: "blockIds must be a non-empty array in request body",
+//       });
+//     }
+
+//     // Run query and return plain JS objects (.lean()) to avoid mongoose circulars
+//     const students = await Student.find(query)
+//       .lean()
+//       .exec();
+
+//     return res.status(200).json({ ok: true, data: students });
+//   } catch (error) {
+//     console.error("Error occured::::>", error);
+//     return res.status(500).json({
+//       ok: false,
+//       message: "Internal server error",
+//       // optionally send error.message in dev only
+//     });
+//   }
+// };
+
+
+
+
+// // Below api will be used to get students by verification users block id
+// export const GetStudentdsDataForVerification = async (req, res) => {
+//   try {
+//     const { schoolBlockCode, isRegisteredBy, isVerified, isBulkRegistered } = req.body;
+
+//     const query = {}
+
+//     if (schoolBlockCode) query.schoolBlockCode = schoolBlockCode;
+//     if (isRegisteredBy) query.isRegisteredBy = isRegisteredBy;
+//     if (isVerified) query.isVerified = isVerified;
+//     if (isBulkRegistered) query.isBulkRegistered = isBulkRegistered;
+
+//      console.log(query)
+
+//     // Basic validation
+//     if (!Array.isArray(schoolBlockCode) || schoolBlockCode.length === 0) {
+//       return res.status(400).json({
+//         ok: false,
+//         message: "blockIds must be a non-empty array in request body",
+//       });
+//     }
+
+//     // Run query and return plain JS objects (.lean()) to avoid mongoose circulars
+//     // Added .limit(100) to fetch only 100 rows each time
+//     const students = await Student.find(query)
+//       .limit(100)
+//       .lean()
+//       .exec();
+
+//     return res.status(200).json({ ok: true, data: students });
+//   } catch (error) {
+//     console.error("Error occured::::>", error);
+//     return res.status(500).json({
+//       ok: false,
+//       message: "Internal server error",
+//       // optionally send error.message in dev only
+//     });
+//   }
+// };
+
+
+
+
 export const GetStudentdsDataForVerification = async (req, res) => {
   try {
-    const { schoolBlockCode, isRegisteredBy, isVerified, isBulkRegistered} = req.body;
+    const { schoolBlockCode, isRegisteredBy, isVerified, isBulkRegistered } = req.body;
 
     const query = {}
 
@@ -26,12 +109,21 @@ export const GetStudentdsDataForVerification = async (req, res) => {
       });
     }
 
+    // Get total count of students matching the query
+    const totalCount = await Student.countDocuments(query);
+
     // Run query and return plain JS objects (.lean()) to avoid mongoose circulars
+    // Added .limit(100) to fetch only 100 rows each time
     const students = await Student.find(query)
+      .limit(100)
       .lean()
       .exec();
 
-    return res.status(200).json({ ok: true, data: students });
+    return res.status(200).json({ 
+      ok: true, 
+      data: students,
+      totalCount: totalCount // Added total count
+    });
   } catch (error) {
     console.error("Error occured::::>", error);
     return res.status(500).json({
@@ -41,10 +133,6 @@ export const GetStudentdsDataForVerification = async (req, res) => {
     });
   }
 };
-
-
-
-
 
 
 export const BulkUploadVerification = async (req, res) => {

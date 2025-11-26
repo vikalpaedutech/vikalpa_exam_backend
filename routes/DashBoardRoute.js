@@ -5,7 +5,7 @@ import express from "express";
 
 import { GetStudentsRegisteredByUserCount, GetStudentsRegisteredByUser,
     DashboardCounts, GetRegisteredStudentsDataBySchoolAndClass,
-    MainDashBoard
+    MainDashBoard, getCallSummary
  } from "../controllers/DashBoardController.js";
 //creating express router.
 
@@ -22,6 +22,8 @@ router.get('/l1-dashboard-counts',  DashboardCounts);
 router.post('/get-registered-students-data-by-class',  GetRegisteredStudentsDataBySchoolAndClass);
 
 router.post('/main-dashboard',  MainDashBoard);
+
+router.post('/calling-dashboard',  getCallSummary);
 
 
 
