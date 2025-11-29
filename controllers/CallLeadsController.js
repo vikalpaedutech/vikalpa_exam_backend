@@ -519,6 +519,241 @@ import { UserAccess } from "../models/UserModel.js";
 
 
 
+// export const CreatePrincipalCallLeads = async (req, res) => {
+//   try {
+//     // 1) aggregate join (same as before) to get matched rows (may be many per school)
+//     const joined = await District_Block_School.aggregate([
+//       { $match: { princiaplContact: { $nin: [null, ""] } } },
+
+//       {
+//         $lookup: {
+//           from: "useraccesses",
+//           let: { schoolBlockId: "$blockId" },
+//           pipeline: [
+//             { $unwind: { path: "$region", preserveNullAndEmptyArrays: true } },
+//             { $unwind: { path: "$region.blockIds", preserveNullAndEmptyArrays: true } },
+//             {
+//               $match: {
+//                 $expr: { $eq: ["$region.blockIds.blockId", "$$schoolBlockId"] }
+//               }
+//             },
+//             { $project: { unqUserObjectId: 1, region: 1 } }
+//           ],
+//           as: "matchedUserAccesses"
+//         }
+//       },
+
+//       { $unwind: { path: "$matchedUserAccesses", preserveNullAndEmptyArrays: true } },
+
+//       {
+//         $lookup: {
+//           from: "users",
+//           localField: "matchedUserAccesses.unqUserObjectId",
+//           foreignField: "_id",
+//           as: "callerUser"
+//         }
+//       },
+
+//       { $unwind: { path: "$callerUser", preserveNullAndEmptyArrays: true } },
+
+//       {
+//         $project: {
+//           _id: 1,
+//           districtId: 1,
+//           districtName: 1,
+//           blockId: 1,
+//           blockName: 1,
+//           centerId: 1,
+//           centerName: 1,
+//           principal: 1,
+//           princiaplContact: 1,
+//           matchedUserAccesses: 1,
+//           callerUser: 1
+//         }
+//       }
+//     ]);
+
+//     // 2) Keep the first row per school (so one lead per school)
+//     const firstBySchool = new Map();
+//     for (const row of joined) {
+//       const schoolIdStr = String(row._id);
+//       if (!firstBySchool.has(schoolIdStr)) {
+//         firstBySchool.set(schoolIdStr, row);
+//       }
+//     }
+
+//     // 3) Build candidate docs - ALWAYS set objectIdOfCaller to null (will be updated from frontend)
+//     const candidateDocs = [];
+//     const skippedNoSchoolId = [];
+
+//     // Get all unique schools as array for distribution
+//     const allSchools = Array.from(firstBySchool.values());
+    
+//     // Calculate distribution for 6 days
+//     const totalSchools = allSchools.length;
+//     const callsPerDay = Math.ceil(totalSchools / 6);
+    
+//     // Group schools by day (0-5 for 6 days)
+//     const schoolsByDay = {};
+//     for (let i = 0; i < 6; i++) {
+//       schoolsByDay[i] = [];
+//     }
+    
+//     // Distribute schools across days using round-robin
+//     allSchools.forEach((school, index) => {
+//       const dayIndex = index % 6;
+//       schoolsByDay[dayIndex].push(school);
+//     });
+
+//     // Get today's date and set time to start of day
+//     const today = new Date();
+//     today.setHours(0, 0, 0, 0);
+
+//     // Process each school and assign actual future calling dates
+//     allSchools.forEach((row, index) => {
+//       const dayIndex = index % 6;
+      
+//       // ensure we have a school _id
+//       if (!row._id) {
+//         skippedNoSchoolId.push({ centerName: row.centerName || null });
+//         return;
+//       }
+
+//       // convert called person id safely
+//       let objectIdOfCalledPerson = null;
+//       try {
+//         objectIdOfCalledPerson =
+//           row._id instanceof mongoose.Types.ObjectId ? row._id : new mongoose.Types.ObjectId(String(row._id));
+//       } catch (e) {
+//         objectIdOfCalledPerson = null;
+//       }
+
+//       if (!objectIdOfCalledPerson) {
+//         skippedNoSchoolId.push({ centerName: row.centerName || null });
+//         return;
+//       }
+
+//       // Calculate actual future calling date (today + dayIndex days)
+//       const futureCallingDate = new Date(today);
+//       futureCallingDate.setDate(today.getDate() + dayIndex);
+
+//       candidateDocs.push({
+//         objectIdOfCalledPerson,
+//         objectIdOfCaller: null, // ALWAYS NULL - will be updated from frontend
+//         callMadeTo: "Principal",
+//         districtId: row.districtId || null,
+//         blockId: row.blockId || null,
+//         centerId: row.centerId || null,
+//         callType: null,
+//         callingStatus: null,
+//         callingRemark1: null,
+//         callingRemark2: null,
+//         mannualRemark: null,
+//         callingDate: futureCallingDate, // ACTUAL FUTURE DATE
+//         scheduledDay: dayIndex, // 0 to 5 representing 6 days
+//         isActive: true
+//       });
+//     });
+
+//     // 4) Remove existing leads for same objectIdOfCalledPerson & callMadeTo:"Principal" (avoid duplicates across runs)
+//     const toInsert = candidateDocs;
+
+//     // 5) Prepare stats with distribution information
+//     const distributionStats = {};
+//     const dateDistribution = {};
+    
+//     for (let i = 0; i < 6; i++) {
+//       distributionStats[`day${i + 1}`] = schoolsByDay[i].length;
+      
+//       // Calculate actual date for each day
+//       const dateForDay = new Date(today);
+//       dateForDay.setDate(today.getDate() + i);
+//       dateDistribution[`day${i + 1}`] = {
+//         count: schoolsByDay[i].length,
+//         date: dateForDay.toISOString().split('T')[0] // YYYY-MM-DD format
+//       };
+//     }
+
+//     const stats = {
+//       totalJoinedRows: joined.length,
+//       uniqueSchoolsFound: firstBySchool.size,
+//       candidateCount: candidateDocs.length,
+//       callsPerDay: callsPerDay,
+//       distribution: distributionStats,
+//       dateDistribution: dateDistribution,
+//       skippedDueToMissingSchoolId: skippedNoSchoolId.length,
+//       toInsertCount: toInsert.length
+//     };
+
+//     if (toInsert.length === 0) {
+//       return res.status(200).json({
+//         status: "oK",
+//         message: "No Principal leads to insert (all already exist or missing school id).",
+//         stats
+//       });
+//     }
+
+//     // 6) Insert using raw collection API
+//     let inserted = [];
+//     try {
+//       const insertResult = await CallLeads.collection.insertMany(
+//         toInsert.map((d) => ({
+//           ...d,
+//           objectIdOfCalledPerson: d.objectIdOfCalledPerson ? d.objectIdOfCalledPerson : null,
+//           objectIdOfCaller: null, // ENSURING it's always null
+//           createdAt: new Date(),
+//           updatedAt: new Date()
+//         })),
+//         { ordered: false }
+//       );
+
+//       // build inserted array minimal info
+//       if (insertResult && insertResult.insertedCount) {
+//         inserted = Object.values(insertResult.insertedIds).map((id) => ({ _id: id }));
+//       }
+//     } catch (insertErr) {
+//       // salvage partial inserts if possible
+//       if (insertErr && insertErr.result && insertErr.result.insertedIds) {
+//         const ids = Object.values(insertErr.result.insertedIds);
+//         inserted = ids.map((id) => ({ _id: id }));
+//       } else {
+//         console.error("Insert error (raw collection):", insertErr);
+//       }
+
+//       const writeErrors = insertErr && insertErr.writeErrors ? insertErr.writeErrors.map((we) => ({ index: we.index, errmsg: we.errmsg })) : null;
+//       return res.status(500).json({
+//         status: "error",
+//         message: "Some Principal leads failed to insert (raw collection).",
+//         stats,
+//         attemptedToInsert: toInsert.length,
+//         insertedCount: Array.isArray(inserted) ? inserted.length : 0,
+//         inserted,
+//         writeErrors
+//       });
+//     }
+
+//     // 7) success response
+//     return res.status(200).json({
+//       status: "oK",
+//       message: "Principal leads created with actual future calling dates. Caller always set to null - will be updated from frontend.",
+//       stats,
+//       created: Array.isArray(inserted) ? inserted.length : 0,
+//       inserted,
+//       dateDistributionSample: dateDistribution
+//     });
+//   } catch (error) {
+//     console.error("CreatePrincipalCallLeads error:", error);
+//     return res.status(500).json({ status: "error", message: error.message || "Server error" });
+//   }
+// };
+
+
+
+
+
+
+
+
 export const CreatePrincipalCallLeads = async (req, res) => {
   try {
     // 1) aggregate join (same as before) to get matched rows (may be many per school)
@@ -605,9 +840,9 @@ export const CreatePrincipalCallLeads = async (req, res) => {
       schoolsByDay[dayIndex].push(school);
     });
 
-    // Get today's date and set time to start of day
+    // Get today's date and set time to start of day with UTC timezone
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
 
     // Process each school and assign actual future calling dates
     allSchools.forEach((row, index) => {
@@ -633,9 +868,10 @@ export const CreatePrincipalCallLeads = async (req, res) => {
         return;
       }
 
-      // Calculate actual future calling date (today + dayIndex days)
+      // Calculate actual future calling date (today + dayIndex days) with UTC timezone
       const futureCallingDate = new Date(today);
-      futureCallingDate.setDate(today.getDate() + dayIndex);
+      futureCallingDate.setUTCDate(today.getUTCDate() + dayIndex);
+      futureCallingDate.setUTCHours(0, 0, 0, 0);
 
       candidateDocs.push({
         objectIdOfCalledPerson,
@@ -649,7 +885,7 @@ export const CreatePrincipalCallLeads = async (req, res) => {
         callingRemark1: null,
         callingRemark2: null,
         mannualRemark: null,
-        callingDate: futureCallingDate, // ACTUAL FUTURE DATE
+        callingDate: futureCallingDate, // ACTUAL FUTURE DATE WITH T00:00:00.000Z
         scheduledDay: dayIndex, // 0 to 5 representing 6 days
         isActive: true
       });
@@ -667,7 +903,8 @@ export const CreatePrincipalCallLeads = async (req, res) => {
       
       // Calculate actual date for each day
       const dateForDay = new Date(today);
-      dateForDay.setDate(today.getDate() + i);
+      dateForDay.setUTCDate(today.getUTCDate() + i);
+      dateForDay.setUTCHours(0, 0, 0, 0);
       dateDistribution[`day${i + 1}`] = {
         count: schoolsByDay[i].length,
         date: dateForDay.toISOString().split('T')[0] // YYYY-MM-DD format
@@ -746,6 +983,25 @@ export const CreatePrincipalCallLeads = async (req, res) => {
     return res.status(500).json({ status: "error", message: error.message || "Server error" });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1204,6 +1460,219 @@ export const CreatePrincipalCallLeads = async (req, res) => {
 
 
 
+// export const CreateABRCLeads = async (req, res) => {
+//   try {
+//     // 1) unique ABRC list (trimmed, prefer isCluster:true)
+//     const uniqueAbrc = await District_Block_School.aggregate([
+//       {
+//         $addFields: {
+//           abrcContactTrimmed: {
+//             $trim: { input: { $ifNull: ["$abrcContact", ""] } }
+//           }
+//         }
+//       },
+//       { $match: { abrcContactTrimmed: { $nin: [null, ""] } } },
+//       { $sort: { abrcContactTrimmed: 1, isCluster: -1, updatedAt: -1 } },
+//       {
+//         $group: {
+//           _id: "$abrcContactTrimmed",
+//           docId: { $first: "$_id" },
+//           abrc: { $first: "$abrc" },
+//           abrcContact: { $first: "$abrcContactTrimmed" },
+//           isCluster: { $first: "$isCluster" },
+//           districtId: { $first: "$districtId" },
+//           blockId: { $first: "$blockId" },
+//           centerId: { $first: "$centerId" },
+//           centerName: { $first: "$centerName" }
+//         }
+//       },
+//       {
+//         $project: {
+//           _id: 0,
+//           abrcContactKey: "$_id",
+//           docId: 1,
+//           abrc: 1,
+//           abrcContact: 1,
+//           isCluster: 1,
+//           districtId: 1,
+//           blockId: 1,
+//           centerId: 1,
+//           centerName: 1
+//         }
+//       }
+//     ]);
+
+//     const uniqueCount = uniqueAbrc.length;
+//     if (uniqueCount === 0) {
+//       return res.status(200).json({
+//         status: "oK",
+//         message: "No unique ABRC contacts found (non-empty).",
+//         uniqueAbrcCount: 0,
+//         created: 0,
+//         inserted: []
+//       });
+//     }
+
+//     // 2) Group ABRCs by blockId for distribution
+//     const abrcsByBlock = {};
+//     uniqueAbrc.forEach(rep => {
+//       const blockId = rep.blockId;
+//       if (!abrcsByBlock[blockId]) {
+//         abrcsByBlock[blockId] = [];
+//       }
+//       abrcsByBlock[blockId].push(rep);
+//     });
+
+//     // 3) For each unique ABRC, build doc (caller will be null)
+//     const CONCURRENCY = 50;
+//     const chunks = [];
+//     for (let i = 0; i < uniqueAbrc.length; i += CONCURRENCY) {
+//       chunks.push(uniqueAbrc.slice(i, i + CONCURRENCY));
+//     }
+
+//     const candidateDocs = [];
+//     const skippedNoDocId = [];
+//     let nullCallerCount = 0;
+//     let rejectedCallerByDesignation = 0;
+
+//     // Get today's date and set time to start of day
+//     const today = new Date();
+//     today.setHours(0, 0, 0, 0);
+
+//     // Process each block separately for distribution
+//     for (const [blockId, blockAbrcs] of Object.entries(abrcsByBlock)) {
+//       // Distribute ABRCs in this block across 3 days
+//       const totalAbrcsInBlock = blockAbrcs.length;
+      
+//       blockAbrcs.forEach((rep, index) => {
+//         const dayIndex = index % 3;
+        
+//         // require docId and blockId; if missing, skip
+//         if (!rep.docId || !rep.blockId) {
+//           skippedNoDocId.push({ abrcContact: rep.abrcContact, docId: rep.docId, blockId: rep.blockId });
+//           return null;
+//         }
+
+//         // convert docId to ObjectId (school id)
+//         let objectIdOfCalledPerson = null;
+//         try {
+//           objectIdOfCalledPerson =
+//             rep.docId instanceof mongoose.Types.ObjectId ? rep.docId : new mongoose.Types.ObjectId(String(rep.docId));
+//         } catch (e) {
+//           objectIdOfCalledPerson = null;
+//         }
+
+//         // Calculate actual future calling date (today + dayIndex days)
+//         const futureCallingDate = new Date(today);
+//         futureCallingDate.setDate(today.getDate() + dayIndex);
+
+//         // build doc (objectIdOfCaller will always be null)
+//         if (!objectIdOfCalledPerson) {
+//           // skip if called person id can't be resolved
+//           skippedNoDocId.push({ abrcContact: rep.abrcContact, docId: rep.docId, blockId: rep.blockId });
+//           return null;
+//         }
+
+//         nullCallerCount++;
+
+//         const doc = {
+//           objectIdOfCalledPerson,
+//           objectIdOfCaller: null, // ALWAYS NULL - will be updated from frontend
+//           callMadeTo: "ABRC",
+//           districtId: rep.districtId || null,
+//           blockId: rep.blockId || null,
+//           centerId: rep.centerId || null,
+//           callType: null,
+//           callingStatus: null,
+//           callingRemark1: null,
+//           callingRemark2: null,
+//           mannualRemark: null,
+//           callingDate: futureCallingDate, // ACTUAL FUTURE DATE
+//           scheduledDay: dayIndex, // 0 to 2 representing 3 days
+//           isActive: true
+//         };
+
+//         candidateDocs.push(doc);
+//       });
+//     }
+
+//     // 3) Remove those already present (objectIdOfCalledPerson + callMadeTo:"ABRC"), to avoid duplicates
+//     const toInsert = candidateDocs;
+
+//     const stats = {
+//       uniqueAbrcCount: uniqueCount,
+//       candidateCount: candidateDocs.length,
+//       toInsertCount: toInsert.length,
+//       skippedDueToMissingDocId: skippedNoDocId.length,
+//       nullCallerCount: candidateDocs.filter((c) => c.objectIdOfCaller == null).length,
+//       rejectedCallerByDesignation
+//     };
+
+//     if (toInsert.length === 0) {
+//       return res.status(200).json({
+//         status: "oK",
+//         message: "No ABRC leads to insert (either already exist or missing docId).",
+//         stats
+//       });
+//     }
+
+//     // 4) Insert documents using raw collection API to allow null objectIdOfCaller (bypasses Mongoose validation)
+//     let inserted = [];
+//     try {
+//       const insertResult = await CallLeads.collection.insertMany(
+//         toInsert.map((d) => {
+//           return {
+//             ...d,
+//             objectIdOfCalledPerson: d.objectIdOfCalledPerson ? d.objectIdOfCalledPerson : null,
+//             objectIdOfCaller: null, // ENSURING it's always null
+//             createdAt: new Date(),
+//             updatedAt: new Date()
+//           };
+//         }),
+//         { ordered: false }
+//       );
+
+//       inserted = insertResult.insertedCount ? Object.values(insertResult.insertedIds).map((id) => ({ _id: id })) : [];
+//     } catch (insertErr) {
+//       if (insertErr && insertErr.result && insertErr.result.insertedIds) {
+//         const ids = Object.values(insertErr.result.insertedIds);
+//         inserted = ids.map((id) => ({ _id: id }));
+//       } else {
+//         console.error("Insert error (raw collection):", insertErr);
+//       }
+
+//       const writeErrors = insertErr && insertErr.writeErrors ? insertErr.writeErrors.map((we) => ({ index: we.index, errmsg: we.errmsg })) : null;
+
+//       return res.status(500).json({
+//         status: "error",
+//         message: "Some ABRC leads failed to insert (raw collection insert).",
+//         stats,
+//         attemptedToInsert: toInsert.length,
+//         insertedCount: Array.isArray(inserted) ? inserted.length : 0,
+//         inserted,
+//         writeErrors
+//       });
+//     }
+
+//     // 5) success response
+//     return res.status(200).json({
+//       status: "oK",
+//       message: "ABRC leads created with actual future calling dates. Caller always set to null - will be updated from frontend.",
+//       stats,
+//       created: Array.isArray(inserted) ? inserted.length : 0,
+//       inserted
+//     });
+//   } catch (error) {
+//     console.error("CreateABRCLeads error:", error);
+//     return res.status(500).json({ status: "error", message: error.message || "Server error" });
+//   }
+// };
+
+
+
+
+
+
 export const CreateABRCLeads = async (req, res) => {
   try {
     // 1) unique ABRC list (trimmed, prefer isCluster:true)
@@ -1279,9 +1748,9 @@ export const CreateABRCLeads = async (req, res) => {
     let nullCallerCount = 0;
     let rejectedCallerByDesignation = 0;
 
-    // Get today's date and set time to start of day
+    // Get today's date and set time to start of day with UTC timezone
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
 
     // Process each block separately for distribution
     for (const [blockId, blockAbrcs] of Object.entries(abrcsByBlock)) {
@@ -1306,9 +1775,10 @@ export const CreateABRCLeads = async (req, res) => {
           objectIdOfCalledPerson = null;
         }
 
-        // Calculate actual future calling date (today + dayIndex days)
+        // Calculate actual future calling date (today + dayIndex days) with UTC timezone
         const futureCallingDate = new Date(today);
-        futureCallingDate.setDate(today.getDate() + dayIndex);
+        futureCallingDate.setUTCDate(today.getUTCDate() + dayIndex);
+        futureCallingDate.setUTCHours(0, 0, 0, 0);
 
         // build doc (objectIdOfCaller will always be null)
         if (!objectIdOfCalledPerson) {
@@ -1331,7 +1801,7 @@ export const CreateABRCLeads = async (req, res) => {
           callingRemark1: null,
           callingRemark2: null,
           mannualRemark: null,
-          callingDate: futureCallingDate, // ACTUAL FUTURE DATE
+          callingDate: futureCallingDate, // ACTUAL FUTURE DATE WITH T00:00:00.000Z
           scheduledDay: dayIndex, // 0 to 2 representing 3 days
           isActive: true
         };
@@ -1411,6 +1881,23 @@ export const CreateABRCLeads = async (req, res) => {
     return res.status(500).json({ status: "error", message: error.message || "Server error" });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2103,6 +2590,264 @@ export const CreateABRCLeads = async (req, res) => {
 
 
 
+// export const CreateBeosLeads = async (req, res) => {
+//   console.log('hello beos call leads')
+
+//   try {
+//     // 1) Get all ACI users first (BEOs are also assigned to ACIs based on district)
+//     const aciUsers = await User.find(
+//       { designation: "ACI" }, 
+//       { _id: 1 }
+//     ).lean();
+
+//     // 2) Get UserAccess documents for these ACI users with district data
+//     const userAccessList = await UserAccess.find(
+//       { 
+//         unqUserObjectId: { $in: aciUsers.map(u => u._id) },
+//         "region.districtId": { $exists: true, $ne: null }
+//       },
+//       { unqUserObjectId: 1, region: 1 }
+//     ).lean();
+
+//     // 3) Create district to caller mapping (SAME AS DEOs)
+//     const districtToCallerMap = {};
+//     userAccessList.forEach(ua => {
+//       ua.region.forEach(region => {
+//         if (region.districtId) {
+//           districtToCallerMap[region.districtId] = ua.unqUserObjectId;
+//         }
+//       });
+//     });
+
+//     // 4) unique BEO list (trimmed, prefer isCluster:true)
+//     const uniqueBeo = await District_Block_School.aggregate([
+//       {
+//         $addFields: {
+//           beoContactTrimmed: {
+//             $trim: { input: { $ifNull: ["$beoContact", ""] } }
+//           }
+//         }
+//       },
+//       { $match: { beoContactTrimmed: { $nin: [null, ""] } } },
+//       { $sort: { beoContactTrimmed: 1, isCluster: -1, updatedAt: -1 } },
+//       {
+//         $group: {
+//           _id: "$beoContactTrimmed",
+//           docId: { $first: "$_id" },
+//           beo: { $first: "$beo" },
+//           beoContact: { $first: "$beoContactTrimmed" },
+//           isCluster: { $first: "$isCluster" },
+//           districtId: { $first: "$districtId" },
+//           blockId: { $first: "$blockId" },
+//           blockName: { $first: "$blockName" }
+//         }
+//       },
+//       {
+//         $project: {
+//           _id: 0,
+//           beoContactKey: "$_id",
+//           docId: 1,
+//           beo: 1,
+//           beoContact: 1,
+//           isCluster: 1,
+//           districtId: 1,
+//           blockId: 1,
+//           blockName: 1
+//         }
+//       }
+//     ]);
+
+//     const uniqueCount = uniqueBeo.length;
+//     if (uniqueCount === 0) {
+//       return res.status(200).json({
+//         status: "oK",
+//         message: "No unique BEO contacts found (non-empty).",
+//         uniqueBeoCount: 0,
+//         created: 0,
+//         inserted: []
+//       });
+//     }
+
+//     // 5) Group BEOs by districtId and then by blockId for distribution
+//     const beosByDistrictAndBlock = {};
+//     uniqueBeo.forEach(rep => {
+//       const districtId = rep.districtId;
+//       const blockId = rep.blockId;
+      
+//       if (!beosByDistrictAndBlock[districtId]) {
+//         beosByDistrictAndBlock[districtId] = {};
+//       }
+//       if (!beosByDistrictAndBlock[districtId][blockId]) {
+//         beosByDistrictAndBlock[districtId][blockId] = [];
+//       }
+//       beosByDistrictAndBlock[districtId][blockId].push(rep);
+//     });
+
+//     // 6) Process BEOs and assign callers using DISTRICT mapping
+//     const CONCURRENCY = 50;
+//     const chunks = [];
+//     for (let i = 0; i < uniqueBeo.length; i += CONCURRENCY) {
+//       chunks.push(uniqueBeo.slice(i, i + CONCURRENCY));
+//     }
+
+//     const candidateDocs = [];
+//     const skippedNoDocId = [];
+//     let nullCallerCount = 0;
+//     let rejectedCallerByDesignation = 0;
+
+//     // Get today's date and set time to start of day
+//     const today = new Date();
+//     today.setHours(0, 0, 0, 0);
+
+//     // Process each district and then each block separately for distribution
+//     for (const [districtId, blocks] of Object.entries(beosByDistrictAndBlock)) {
+//       // Get all blocks in this district
+//       const blockIds = Object.keys(blocks);
+      
+//       // Distribute blocks across 3 days
+//       blockIds.forEach((blockId, blockIndex) => {
+//         const dayIndex = blockIndex % 3;
+        
+//         // Process each BEO in this block
+//         blocks[blockId].forEach((rep, beoIndex) => {
+//           // require docId and districtId; if missing, skip
+//           if (!rep.docId || !rep.districtId) {
+//             skippedNoDocId.push({ beoContact: rep.beoContact, docId: rep.docId, districtId: rep.districtId });
+//             return null;
+//           }
+
+//           // convert docId to ObjectId (school id)
+//           let objectIdOfCalledPerson = null;
+//           try {
+//             objectIdOfCalledPerson =
+//               rep.docId instanceof mongoose.Types.ObjectId ? rep.docId : new mongoose.Types.ObjectId(String(rep.docId));
+//           } catch (e) {
+//             objectIdOfCalledPerson = null;
+//           }
+
+//           // Calculate actual future calling date (today + dayIndex days)
+//           const futureCallingDate = new Date(today);
+//           futureCallingDate.setDate(today.getDate() + dayIndex);
+
+//           // build doc (objectIdOfCaller will always be null)
+//           if (!objectIdOfCalledPerson) {
+//             // skip if called person id can't be resolved
+//             skippedNoDocId.push({ beoContact: rep.beoContact, docId: rep.docId, districtId: rep.districtId });
+//             return null;
+//           }
+
+//           nullCallerCount++;
+
+//           const doc = {
+//             objectIdOfCalledPerson,
+//             objectIdOfCaller: null, // ALWAYS NULL - will be updated from frontend
+//             callMadeTo: "BEO",
+//             districtId: rep.districtId || null,
+//             blockId: rep.blockId || null, // BEOs have blockId but caller is assigned by district
+//             centerId: null, // BEOs are block level, no centerId
+//             callType: null,
+//             callingStatus: null,
+//             callingRemark1: null,
+//             callingRemark2: null,
+//             mannualRemark: null,
+//             callingDate: futureCallingDate, // ACTUAL FUTURE DATE
+//             scheduledDay: dayIndex, // 0 to 2 representing 3 days
+//             isActive: true
+//           };
+
+//           candidateDocs.push(doc);
+//         });
+//       });
+//     }
+
+//     const toInsert = candidateDocs;
+
+//     const stats = {
+//       uniqueBeoCount: uniqueCount,
+//       candidateCount: candidateDocs.length,
+//       toInsertCount: toInsert.length,
+//       skippedDueToMissingDocId: skippedNoDocId.length,
+//       nullCallerCount: candidateDocs.filter((c) => c.objectIdOfCaller == null).length,
+//       rejectedCallerByDesignation,
+//       aciUsersCount: aciUsers.length,
+//       userAccessCount: userAccessList.length,
+//       districtsMapped: Object.keys(districtToCallerMap).length
+//     };
+
+//     if (toInsert.length === 0) {
+//       return res.status(200).json({
+//         status: "oK",
+//         message: "No BEO leads to insert (either already exist or missing docId).",
+//         stats
+//       });
+//     }
+
+//     // 6) Insert documents using raw collection API to allow null objectIdOfCaller
+//     let inserted = [];
+//     try {
+//       const insertResult = await CallLeads.collection.insertMany(
+//         toInsert.map((d) => {
+//           return {
+//             ...d,
+//             objectIdOfCalledPerson: d.objectIdOfCalledPerson ? d.objectIdOfCalledPerson : null,
+//             objectIdOfCaller: null, // ENSURING it's always null
+//             createdAt: new Date(),
+//             updatedAt: new Date()
+//           };
+//         }),
+//         { ordered: false }
+//       );
+
+//       inserted = insertResult.insertedCount ? Object.values(insertResult.insertedIds).map((id) => ({ _id: id })) : [];
+//     } catch (insertErr) {
+//       if (insertErr && insertErr.result && insertErr.result.insertedIds) {
+//         const ids = Object.values(insertErr.result.insertedIds);
+//         inserted = ids.map((id) => ({ _id: id }));
+//       } else {
+//         console.error("Insert error (raw collection):", insertErr);
+//       }
+
+//       const writeErrors = insertErr && insertErr.writeErrors ? insertErr.writeErrors.map((we) => ({ index: we.index, errmsg: we.errmsg })) : null;
+
+//       return res.status(500).json({
+//         status: "error",
+//         message: "Some BEO leads failed to insert (raw collection insert).",
+//         stats,
+//         attemptedToInsert: toInsert.length,
+//         insertedCount: Array.isArray(inserted) ? inserted.length : 0,
+//         inserted,
+//         writeErrors
+//       });
+//     }
+
+//     // 7) success response
+//     return res.status(200).json({
+//       status: "oK",
+//       message: "BEO leads created with actual future calling dates. Caller always set to null - will be updated from frontend.",
+//       stats,
+//       created: Array.isArray(inserted) ? inserted.length : 0,
+//       inserted
+//     });
+//   } catch (error) {
+//     console.error("CreateBeosLeads error:", error);
+//     return res.status(500).json({ status: "error", message: error.message || "Server error" });
+//   }
+// };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 export const CreateBeosLeads = async (req, res) => {
   console.log('hello beos call leads')
 
@@ -2208,9 +2953,9 @@ export const CreateBeosLeads = async (req, res) => {
     let nullCallerCount = 0;
     let rejectedCallerByDesignation = 0;
 
-    // Get today's date and set time to start of day
+    // Get today's date and set time to start of day with UTC timezone
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
 
     // Process each district and then each block separately for distribution
     for (const [districtId, blocks] of Object.entries(beosByDistrictAndBlock)) {
@@ -2238,9 +2983,10 @@ export const CreateBeosLeads = async (req, res) => {
             objectIdOfCalledPerson = null;
           }
 
-          // Calculate actual future calling date (today + dayIndex days)
+          // Calculate actual future calling date (today + dayIndex days) with UTC timezone
           const futureCallingDate = new Date(today);
-          futureCallingDate.setDate(today.getDate() + dayIndex);
+          futureCallingDate.setUTCDate(today.getUTCDate() + dayIndex);
+          futureCallingDate.setUTCHours(0, 0, 0, 0);
 
           // build doc (objectIdOfCaller will always be null)
           if (!objectIdOfCalledPerson) {
@@ -2263,7 +3009,7 @@ export const CreateBeosLeads = async (req, res) => {
             callingRemark1: null,
             callingRemark2: null,
             mannualRemark: null,
-            callingDate: futureCallingDate, // ACTUAL FUTURE DATE
+            callingDate: futureCallingDate, // ACTUAL FUTURE DATE WITH T00:00:00.000Z
             scheduledDay: dayIndex, // 0 to 2 representing 3 days
             isActive: true
           };
@@ -2346,6 +3092,7 @@ export const CreateBeosLeads = async (req, res) => {
     return res.status(500).json({ status: "error", message: error.message || "Server error" });
   }
 };
+
 
 
 // export const CreateDeosLeads = async (req, res) => {

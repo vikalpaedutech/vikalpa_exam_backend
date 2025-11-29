@@ -144,11 +144,12 @@ import { User } from "../models/UserModel.js";
 
 export const GetStudentdsDataForVerification = async (req, res) => {
   try {
-    const { schoolBlockCode, isRegisteredBy, isVerified, isBulkRegistered, page = 1, limit = 100 } = req.body;
+    const { schoolBlockCode, schoolDistrictCode, isRegisteredBy, isVerified, isBulkRegistered, page = 1, limit = 100 } = req.body;
 
     const query = {}
 
     if (schoolBlockCode) query.schoolBlockCode = schoolBlockCode;
+    if (schoolDistrictCode) query.schoolDistrictCode = schoolDistrictCode;
     if (isRegisteredBy) query.isRegisteredBy = isRegisteredBy;
     if (isVerified) query.isVerified = isVerified;
     if (isBulkRegistered) query.isBulkRegistered = isBulkRegistered;
@@ -156,10 +157,10 @@ export const GetStudentdsDataForVerification = async (req, res) => {
      console.log(query)
 
     // Basic validation
-    if (!Array.isArray(schoolBlockCode) || schoolBlockCode.length === 0) {
+    if (!Array.isArray(schoolDistrictCode) || schoolDistrictCode.length === 0) {
       return res.status(400).json({
         ok: false,
-        message: "blockIds must be a non-empty array in request body",
+        message: "district ids must be a non-empty array in request body",
       });
     }
 
@@ -197,14 +198,6 @@ export const GetStudentdsDataForVerification = async (req, res) => {
     });
   }
 };
-
-
-
-
-
-
-
-
 
 
 
@@ -288,6 +281,8 @@ export const BulkUploadVerification = async (req, res) => {
     res.status(500).json({ status: "Error", message: error.message });
   }
 }
+
+
 
 
 
