@@ -143,17 +143,24 @@ import { User } from "../models/UserModel.js";
 
 
 export const GetStudentdsDataForVerification = async (req, res) => {
+
+  console.log("Hello verificaition")
+
   try {
     const { schoolBlockCode, schoolDistrictCode, isRegisteredBy, isVerified, isBulkRegistered, page = 1, limit = 100 } = req.body;
 
-    const query = {}
+    const query = {
+      isBulkRegistered:false
+    }
 
     if (schoolBlockCode) query.schoolBlockCode = schoolBlockCode;
     if (schoolDistrictCode) query.schoolDistrictCode = schoolDistrictCode;
     if (isRegisteredBy) query.isRegisteredBy = isRegisteredBy;
     if (isVerified) query.isVerified = isVerified;
-    if (isBulkRegistered) query.isBulkRegistered = isBulkRegistered;
+    // if (isBulkRegistered) query.isBulkRegistered = isBulkRegistered;
 
+
+    console.log(isBulkRegistered)
      console.log(query)
 
     // Basic validation

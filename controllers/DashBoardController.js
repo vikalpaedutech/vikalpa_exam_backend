@@ -1828,3 +1828,134 @@ export const getCallSummary = async (req, res) => {
     });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//Verification dashboard
+
+
+
+export const getVerificationSummary = async (req, res) => {
+    try {
+        const pipeline = [
+            {
+                $match: {
+                    isBulkRegistered: false,
+                    isVerified: { $nin: ["", null] }
+                }
+            },
+            {
+                $facet: {
+                    // District-wise summary
+                    districtSummary: [
+                        {
+                            $group: {
+                                _id: "$schoolDistrict",
+                                verified: {
+                                    $sum: { $cond: [{ $eq: ["$isVerified", "Verified"] }, 1, 0] }
+                                },
+                                pending: {
+                                    $sum: { $cond: [{ $eq: ["$isVerified", "Pending"] }, 1, 0] }
+                                },
+                                rejected: {
+                                    $sum: { $cond: [{ $eq: ["$isVerified", "Rejected"] }, 1, 0] }
+                                },
+                                total: { $sum: 1 }
+                            }
+                        },
+                        {
+                            $project: {
+                                _id: 0,
+                                district: "$_id",
+                                verified: 1,
+                                pending: 1,
+                                rejected: 1,
+                                total: 1
+                            }
+                        },
+                        { $sort: { district: 1 } }
+                    ],
+                    // Overall totals
+                    overallSummary: [
+                        {
+                            $group: {
+                                _id: null,
+                                totalVerified: {
+                                    $sum: { $cond: [{ $eq: ["$isVerified", "Verified"] }, 1, 0] }
+                                },
+                                totalPending: {
+                                    $sum: { $cond: [{ $eq: ["$isVerified", "Pending"] }, 1, 0] }
+                                },
+                                totalRejected: {
+                                    $sum: { $cond: [{ $eq: ["$isVerified", "Rejected"] }, 1, 0] }
+                                },
+                                totalStudents: { $sum: 1 }
+                            }
+                        }
+                    ]
+                }
+            }
+        ];
+
+        const [result] = await Student.aggregate(pipeline);
+
+        const response = {
+            success: true,
+            overallSummary: result.overallSummary[0] || {
+                totalVerified: 0,
+                totalPending: 0,
+                totalRejected: 0,
+                totalStudents: 0
+            },
+            districtWiseSummary: result.districtSummary,
+            totalDistricts: result.districtSummary.length
+        };
+
+        // Remove _id from overall summary
+        delete response.overallSummary._id;
+
+        res.status(200).json(response);
+
+    } catch (error) {
+        console.error("Error in detailed verification summary:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+};
