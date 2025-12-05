@@ -211,6 +211,96 @@ export const GetStudentdsDataForVerification = async (req, res) => {
 
 
 
+export const GetWrongAadharData = async (req, res) => {
+  console.log("Hello verification - Aadhar correction fetch");
+
+  try {
+    const {
+      schoolDistrictCode,
+      page = 1,
+      limit = 100,
+    } = req.body;
+
+    // Base query (keep as before)
+    const query = {
+    };
+
+
+    if (schoolDistrictCode) query.schoolDistrictCode = schoolDistrictCode;
+
+
+    // Basic validation
+    if (!Array.isArray(schoolDistrictCode) || schoolDistrictCode.length === 0) {
+      return res.status(400).json({
+        ok: false,
+        message: "district ids must be a non-empty array in request body",
+      });
+    }
+
+    // Aadhaar-specific regexes / patterns
+    const naRegex = /^(?:na|n\/a)$/i;        // matches "NA" or "N/A" case-insensitive
+    const endsWithSixZerosRegex = /0{6}$/;  // ends with exactly 6 zeros (or more; still matches)
+    const lengthLessThan12Regex = /^.{0,11}$/; // string length 0..11 (i.e. < 12)
+
+    // Build OR conditions across likely field names
+    const aadharOrConditions = [
+      // NA / N/A (case-insensitive)
+      { aadhar: { $regex: naRegex } },
+      { aadhaar: { $regex: naRegex } },
+      { aadhaarNumber: { $regex: naRegex } },
+      { aadharNumber: { $regex: naRegex } },
+
+      // ends with six zeros
+      { aadhar: { $regex: endsWithSixZerosRegex } },
+      { aadhaar: { $regex: endsWithSixZerosRegex } },
+      { aadhaarNumber: { $regex: endsWithSixZerosRegex } },
+      { aadharNumber: { $regex: endsWithSixZerosRegex } },
+
+      // length less than 12 characters
+      { aadhar: { $regex: lengthLessThan12Regex } },
+      { aadhaar: { $regex: lengthLessThan12Regex } },
+      { aadhaarNumber: { $regex: lengthLessThan12Regex } },
+      { aadharNumber: { $regex: lengthLessThan12Regex } },
+    ];
+
+    // Attach the Aadhaar conditions to the main query
+    query.$or = aadharOrConditions;
+
+    console.log("final query with aadhar filters:", query);
+
+    // Get total count of students matching the query
+    const totalCount = await Student.countDocuments(query);
+
+    // Calculate pagination
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const skip = (pageNum - 1) * limitNum;
+    const totalPages = Math.ceil(totalCount / limitNum);
+
+    // Run query and return plain JS objects (.lean()) to avoid mongoose circulars
+    const students = await Student.find(query).skip(skip).limit(limitNum).lean().exec();
+
+    return res.status(200).json({
+      ok: true,
+      data: students,
+      totalCountOfData: students.length,
+      totalCount: totalCount,
+      currentPage: pageNum,
+      totalPages: totalPages,
+      hasNextPage: pageNum < totalPages,
+      hasPrevPage: pageNum > 1,
+    });
+  } catch (error) {
+    console.error("Error occured::::>", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Internal server error",
+      // optionally send error.message in dev only
+    });
+  }
+};
+
+
 
 export const BulkUploadVerification = async (req, res) => {
   // const {schoolDistrictCode} = req.body;

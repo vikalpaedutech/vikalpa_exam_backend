@@ -406,3 +406,163 @@ console.log(req.body)
     });
   }
 }
+
+
+
+
+
+
+
+//Patch aadhar
+
+export const updateStudentAadhar = async (req, res) => {
+  try {
+    const { _id, aadhar, correctedBy } = req.body; // Get correctedBy from req.body
+    
+    console.log("Request body:", req.body);
+    console.log("CorrectedBy from request:", correctedBy);
+    
+    // Validate required fields
+    if (!_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Student ID is required"
+      });
+    }
+
+    if (!aadhar) {
+      return res.status(400).json({
+        success: false,
+        message: "Aadhar number is required"
+      });
+    }
+
+    // Validate correctedBy if provided
+    if (!correctedBy) {
+      console.warn("Warning: correctedBy is not provided in request body");
+    }
+
+    // Validate Aadhar format
+    const aadharDigits = String(aadhar).replace(/\D/g, '');
+    
+    // Check if it's 12 digits
+    if (aadharDigits.length !== 12) {
+      return res.status(400).json({
+        success: false,
+        message: "Aadhar number must be exactly 12 digits"
+      });
+    }
+
+    // Check if it contains only numbers
+    if (!/^\d+$/.test(aadharDigits)) {
+      return res.status(400).json({
+        success: false,
+        message: "Aadhar number must contain only digits"
+      });
+    }
+
+    // Check if it's a valid aadhar (not all zeros, not starting with 0 or 1)
+    if (aadharDigits === "000000000000") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Aadhar number"
+      });
+    }
+
+    if (aadharDigits.startsWith('0') || aadharDigits.startsWith('1')) {
+      return res.status(400).json({
+        success: false,
+        message: "Aadhar number cannot start with 0 or 1"
+      });
+    }
+
+    // Check if student exists
+    const existingStudent = await Student.findById(_id);
+    if (!existingStudent) {
+      return res.status(404).json({
+        success: false,
+        message: "Student not found"
+      });
+    }
+
+    // Check if aadhar is different from current
+    const currentAadhar = existingStudent.aadhar || existingStudent.aadharNumber || existingStudent.aadhaar || "";
+    const currentAadharDigits = String(currentAadhar).replace(/\D/g, '');
+    
+    if (aadharDigits === currentAadharDigits) {
+      return res.status(400).json({
+        success: false,
+        message: "New Aadhar number is same as current Aadhar number"
+      });
+    }
+
+    // Prepare update object
+    const updateData = {
+      aadhar: aadharDigits, // Update main aadhar field
+      formCorrectionBy: correctedBy || null, // Use correctedBy from request body
+      correctedFields: "aadhar",
+      updatedAt: new Date()
+    };
+
+    console.log("Update data being sent to MongoDB:", updateData);
+
+    // Update the student
+    const updatedStudent = await Student.findByIdAndUpdate(
+      _id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedStudent) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to update student record"
+      });
+    }
+
+    console.log("Updated student from DB:", updatedStudent.toObject());
+
+    // Format response
+    const responseStudent = updatedStudent.toObject();
+    
+    // Remove sensitive fields if needed
+    delete responseStudent.__v;
+    
+    // Ensure aadhar is returned as string, not scientific notation
+    if (responseStudent.aadhar && typeof responseStudent.aadhar === 'number') {
+      responseStudent.aadhar = responseStudent.aadhar.toString();
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Aadhar number updated successfully",
+      data: responseStudent
+    });
+
+  } catch (error) {
+    console.error("❌ Error updating student Aadhar:", error);
+    console.error("Error stack:", error.stack);
+    
+    // Handle specific MongoDB errors
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid student ID format"
+      });
+    }
+
+    if (error.name === 'ValidationError') {
+      console.error("Validation error details:", error.errors);
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};

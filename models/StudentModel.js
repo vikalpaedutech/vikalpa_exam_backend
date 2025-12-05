@@ -268,6 +268,8 @@ const StudentSchema = new Schema(
     counsellingCenterAllocation: {type: String, default:null},
     admissionStatus: {type: String, default:null},
     registrationDate: {type: Date, default:null},
+    formCorrectionBy: {type: String, default:null},
+    correctedFields: {type: String, default: null}
 
   },
   { timestamps: true }

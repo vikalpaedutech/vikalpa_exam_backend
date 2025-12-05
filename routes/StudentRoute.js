@@ -4,7 +4,7 @@ import express from "express";
 
 import { createStudent,updateStudent, uploadImage,
     getStudentBySrnNumberOrSlipId, 
-    IsAdmitCardDownloaded
+    IsAdmitCardDownloaded, updateStudentAadhar
  } from "../controllers/StudentController.js";
 
 //creating express router.
@@ -21,5 +21,10 @@ router.post("/get-student", getStudentBySrnNumberOrSlipId);
 
 router.post("/admit-card-downloaded", IsAdmitCardDownloaded);
 // Upload dress size PDF for a student
+
+
+
+
+router.post("/update-aadhar", updateStudentAadhar);
 
 export default router;

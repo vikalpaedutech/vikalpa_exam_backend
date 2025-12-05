@@ -3,7 +3,7 @@
 import express from "express";
 
 import { GetStudentdsDataForVerification, UpdateStudentVerification,
-BulkUploadVerification
+BulkUploadVerification, GetWrongAadharData
 
  } from "../controllers/StudentVerificationController.js";
 
@@ -16,6 +16,11 @@ const router = express.Router();
 router.post('/get-student-data-for-verification',  GetStudentdsDataForVerification);
 
 router.patch('/patch-student-data-for-verification',  UpdateStudentVerification);
+
+
+
+router.post('/aadhar-correction-data',  GetWrongAadharData);
+
 
 
 
