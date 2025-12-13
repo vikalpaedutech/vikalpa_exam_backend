@@ -25,7 +25,9 @@ const DistrictBlockBuniyaadCenterSchema = new Schema(
     deo: {type: String, default: null},
      deoContact: {type: String, default:null},
 
-
+    centerPreference1: {type: String, default: null},
+    centerPreference2: {type: String, default: null},
+    centerPrefrenceFilledBy: {type: String, default: null}
   }
   ,
   { timestamps: true }

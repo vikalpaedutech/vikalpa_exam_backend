@@ -267,3 +267,110 @@ export const updateAbrcPrincipal = async (req, res) => {
     });
   }
 };
+
+
+
+
+
+
+//Center-Prefefrence updation
+
+export const updateSchoolCenterPreferences = async (req, res) => {
+   try {
+    // Get _id from request body (not params)
+    const { centerPreference1, centerPreference2, _id,  centerPrefrenceFilledBy } = req.body;
+
+    // Validate input - FIXED: Should check if !_id, not if _id
+    if (!_id) {
+      return res.status(400).json({
+        success: false,
+        message: "School ID (_id) is required in request body"
+      });
+    }
+
+    // Check if at least one preference is provided
+    if (centerPreference1 === undefined && centerPreference2 === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one center preference is required"
+      });
+    }
+
+    // Find the school by _id
+    const school = await District_Block_School.findById(_id);
+    
+    if (!school) {
+      return res.status(404).json({
+        success: false,
+        message: "School not found with the provided _id"
+      });
+    }
+
+    // Validate preferences are not the same (only if both are provided and not empty/null)
+    if (centerPreference1 && centerPreference2 && centerPreference1 === centerPreference2) {
+      return res.status(400).json({
+        success: false,
+        message: "Center preferences cannot be the same"
+      });
+    }
+
+    // Prepare update data
+    const updateData = {centerPrefrenceFilledBy:centerPrefrenceFilledBy};
+    
+    if (centerPreference1 !== undefined) {
+      updateData.centerPreference1 = centerPreference1 === "" ? null : centerPreference1;
+    }
+    
+    if (centerPreference2 !== undefined) {
+      updateData.centerPreference2 = centerPreference2 === "" ? null : centerPreference2;
+    }
+
+    // Update the school using _id from body
+    const updatedSchool = await District_Block_School.findByIdAndUpdate(
+      _id,  // Using _id from body
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Center preferences updated successfully",
+      data: {
+        _id: updatedSchool._id,
+        centerId: updatedSchool.centerId,
+        centerName: updatedSchool.centerName,
+        districtName: updatedSchool.districtName,
+        blockName: updatedSchool.blockName,
+        centerPreference1: updatedSchool.centerPreference1,
+        centerPreference2: updatedSchool.centerPreference2,
+        updatedAt: updatedSchool.updatedAt
+      }
+    });
+
+  } catch (error) {
+    console.error("Error updating center preferences:", error);
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: "Validation error",
+        error: Object.values(error.errors).map(err => err.message)
+      });
+    }
+
+    // Handle CastError (invalid ID format)
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid school ID format. _id must be a valid MongoDB ObjectId"
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Server error while updating center preferences",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
