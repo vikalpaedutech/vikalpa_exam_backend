@@ -804,11 +804,128 @@ export const GetRegisteredStudentsDataBySchoolAndClass = async (req, res) => {
 
 
 
+// export const MainDashBoard = async (req, res) => {
+//   console.log("Hello main dashboard");
+//   try {
+//     const aggregationPipeline = [
+//       // First, group by centerId to remove duplicates and get unique schools
+//       {
+//         $group: {
+//           _id: "$centerId",
+//           doc: { $first: "$$ROOT" }
+//         }
+//       },
+//       {
+//         $replaceRoot: { newRoot: "$doc" }
+//       },
+//       // Then perform the lookup for student counts
+//       {
+//         $lookup: {
+//           from: "students",
+//           let: { centerId: "$centerId" },
+//           pipeline: [
+//             {
+//               $match: {
+//                 $expr: {
+//                   $and: [
+//                     { $eq: ["$schoolCode", "$$centerId"] },
+//                     { $in: ["$classOfStudent", ["8", "10"]] },
+//                     { $and: [
+//                       { $ne: ["$isRegisteredBy", ""] },
+//                       { $ne: ["$isRegisteredBy", null] }
+//                     ]}
+//                   ]
+//                 }
+//               }
+//             },
+//             {
+//               $group: {
+//                 _id: "$classOfStudent",
+//                 count: { $sum: 1 }
+//               }
+//             }
+//           ],
+//           as: "classRegistrations"
+//         }
+//       },
+//       {
+//         $addFields: {
+//           registrationCount8: {
+//             $let: {
+//               vars: {
+//                 class8: {
+//                   $arrayElemAt: [
+//                     {
+//                       $filter: {
+//                         input: "$classRegistrations",
+//                         as: "reg",
+//                         cond: { $eq: ["$$reg._id", "8"] }
+//                       }
+//                     },
+//                     0
+//                   ]
+//                 }
+//               },
+//               in: { $ifNull: ["$$class8.count", 0] }
+//             }
+//           },
+//           registrationCount10: {
+//             $let: {
+//               vars: {
+//                 class10: {
+//                   $arrayElemAt: [
+//                     {
+//                       $filter: {
+//                         input: "$classRegistrations",
+//                         as: "reg",
+//                         cond: { $eq: ["$$reg._id", "10"] }
+//                       }
+//                     },
+//                     0
+//                   ]
+//                 }
+//               },
+//               in: { $ifNull: ["$$class10.count", 0] }
+//             }
+//           },
+//           totalRegistrations: {
+//             $sum: "$classRegistrations.count"
+//           }
+//         }
+//       },
+//       {
+//         $project: {
+//           classRegistrations: 0
+//         }
+//       }
+//     ];
+
+//     const result = await District_Block_School.aggregate(aggregationPipeline);
+    
+//     console.log("Total unique schools processed:", result.length);
+    
+//     res.status(200).json({ 
+//       status: "success", 
+//       data: result,
+//       message: "Dashboard data fetched successfully" 
+//     });
+    
+//   } catch (error) {
+//     console.error("Error", error);
+//     res.status(500).json({ status: "error", message: error.message || "Server error" });
+//   }
+// };
+
+
+
+
+
+
+
 export const MainDashBoard = async (req, res) => {
   console.log("Hello main dashboard");
   try {
     const aggregationPipeline = [
-      // First, group by centerId to remove duplicates and get unique schools
       {
         $group: {
           _id: "$centerId",
@@ -818,7 +935,6 @@ export const MainDashBoard = async (req, res) => {
       {
         $replaceRoot: { newRoot: "$doc" }
       },
-      // Then perform the lookup for student counts
       {
         $lookup: {
           from: "students",
@@ -830,10 +946,12 @@ export const MainDashBoard = async (req, res) => {
                   $and: [
                     { $eq: ["$schoolCode", "$$centerId"] },
                     { $in: ["$classOfStudent", ["8", "10"]] },
-                    { $and: [
-                      { $ne: ["$isRegisteredBy", ""] },
-                      { $ne: ["$isRegisteredBy", null] }
-                    ]}
+                    {
+                      $and: [
+                        { $ne: ["$isRegisteredBy", ""] },
+                        { $ne: ["$isRegisteredBy", null] }
+                      ]
+                    }
                   ]
                 }
               }
@@ -901,23 +1019,34 @@ export const MainDashBoard = async (req, res) => {
     ];
 
     const result = await District_Block_School.aggregate(aggregationPipeline);
-    
+
+    // ✅ NEW: compute totals WITHOUT touching aggregation
+    let totalCount8 = 0;
+    let totalCount10 = 0;
+
+    for (const school of result) {
+      totalCount8 += Number(school.registrationCount8 || 0);
+      totalCount10 += Number(school.registrationCount10 || 0);
+    }
+
     console.log("Total unique schools processed:", result.length);
-    
-    res.status(200).json({ 
-      status: "success", 
-      data: result,
-      message: "Dashboard data fetched successfully" 
+
+    res.status(200).json({
+      status: "success",
+      data: result,               // 🔒 unchanged
+      totalCount8,                // ➕ added
+      totalCount10,               // ➕ added
+      message: "Dashboard data fetched successfully"
     });
-    
+
   } catch (error) {
     console.error("Error", error);
-    res.status(500).json({ status: "error", message: error.message || "Server error" });
+    res.status(500).json({
+      status: "error",
+      message: error.message || "Server error"
+    });
   }
 };
-
-
-
 
 
 

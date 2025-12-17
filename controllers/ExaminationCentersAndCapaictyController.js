@@ -19,7 +19,8 @@ export const createExaminationCenter = async (req, res) => {
       studentDistributionCount,
       examType,
       examinationLevel,
-      requiredPaperCount
+      requiredPaperCount,
+      examinationVenueSequenceInBlock
     } = req.body;
 
     // Basic validation
@@ -54,7 +55,8 @@ export const createExaminationCenter = async (req, res) => {
       remaining,
       examType,
       examinationLevel,
-      requiredPaperCount
+      requiredPaperCount,
+      examinationVenueSequenceInBlock
     });
 
     res.status(201).json({

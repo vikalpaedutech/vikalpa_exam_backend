@@ -15,8 +15,8 @@ const ExaminationCentersAndCapacitySchema = new Schema(
     remaining: {type: Number, default: 0},
     examType: {type: String, default: null},
     examinationLevel: {type: String, default: null},
-    requiredPaperCount: {type: Number, default: 0}
-
+    requiredPaperCount: {type: Number, default: 0},
+    examinationVenueSequenceInBlock: {type: String},
     
   },
   { timestamps: true }
