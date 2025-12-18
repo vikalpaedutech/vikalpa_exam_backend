@@ -922,6 +922,137 @@ export const GetRegisteredStudentsDataBySchoolAndClass = async (req, res) => {
 
 
 
+// export const MainDashBoard = async (req, res) => {
+//   console.log("Hello main dashboard");
+//   try {
+//     const aggregationPipeline = [
+//       {
+//         $group: {
+//           _id: "$centerId",
+//           doc: { $first: "$$ROOT" }
+//         }
+//       },
+//       {
+//         $replaceRoot: { newRoot: "$doc" }
+//       },
+//       {
+//         $lookup: {
+//           from: "students",
+//           let: { centerId: "$centerId" },
+//           pipeline: [
+//             {
+//               $match: {
+//                 $expr: {
+//                   $and: [
+//                     { $eq: ["$schoolCode", "$$centerId"] },
+//                     { $in: ["$classOfStudent", ["8", "10"]] },
+//                     {
+//                       $and: [
+//                         { $ne: ["$isRegisteredBy", ""] },
+//                         { $ne: ["$isRegisteredBy", null] }
+//                       ]
+//                     }
+//                   ]
+//                 }
+//               }
+//             },
+//             {
+//               $group: {
+//                 _id: "$classOfStudent",
+//                 count: { $sum: 1 }
+//               }
+//             }
+//           ],
+//           as: "classRegistrations"
+//         }
+//       },
+//       {
+//         $addFields: {
+//           registrationCount8: {
+//             $let: {
+//               vars: {
+//                 class8: {
+//                   $arrayElemAt: [
+//                     {
+//                       $filter: {
+//                         input: "$classRegistrations",
+//                         as: "reg",
+//                         cond: { $eq: ["$$reg._id", "8"] }
+//                       }
+//                     },
+//                     0
+//                   ]
+//                 }
+//               },
+//               in: { $ifNull: ["$$class8.count", 0] }
+//             }
+//           },
+//           registrationCount10: {
+//             $let: {
+//               vars: {
+//                 class10: {
+//                   $arrayElemAt: [
+//                     {
+//                       $filter: {
+//                         input: "$classRegistrations",
+//                         as: "reg",
+//                         cond: { $eq: ["$$reg._id", "10"] }
+//                       }
+//                     },
+//                     0
+//                   ]
+//                 }
+//               },
+//               in: { $ifNull: ["$$class10.count", 0] }
+//             }
+//           },
+//           totalRegistrations: {
+//             $sum: "$classRegistrations.count"
+//           }
+//         }
+//       },
+//       {
+//         $project: {
+//           classRegistrations: 0
+//         }
+//       }
+//     ];
+
+//     const result = await District_Block_School.aggregate(aggregationPipeline);
+
+//     // ✅ NEW: compute totals WITHOUT touching aggregation
+//     let totalCount8 = 0;
+//     let totalCount10 = 0;
+
+//     for (const school of result) {
+//       totalCount8 += Number(school.registrationCount8 || 0);
+//       totalCount10 += Number(school.registrationCount10 || 0);
+//     }
+
+//     console.log("Total unique schools processed:", result.length);
+
+//     res.status(200).json({
+//       status: "success",
+//       data: result,               // 🔒 unchanged
+//       totalCount8,                // ➕ added
+//       totalCount10,               // ➕ added
+//       message: "Dashboard data fetched successfully"
+//     });
+
+//   } catch (error) {
+//     console.error("Error", error);
+//     res.status(500).json({
+//       status: "error",
+//       message: error.message || "Server error"
+//     });
+//   }
+// };
+
+
+
+
+
+
 export const MainDashBoard = async (req, res) => {
   console.log("Hello main dashboard");
   try {
@@ -959,7 +1090,16 @@ export const MainDashBoard = async (req, res) => {
             {
               $group: {
                 _id: "$classOfStudent",
-                count: { $sum: 1 }
+                count: { $sum: 1 },
+                admitCardCount: {
+                  $sum: {
+                    $cond: [
+                      { $eq: ["$isL1AdmitCardDownloaded", true] },
+                      1,
+                      0
+                    ]
+                  }
+                }
               }
             }
           ],
@@ -1006,6 +1146,44 @@ export const MainDashBoard = async (req, res) => {
               in: { $ifNull: ["$$class10.count", 0] }
             }
           },
+          admitCardCount8: {
+            $let: {
+              vars: {
+                class8: {
+                  $arrayElemAt: [
+                    {
+                      $filter: {
+                        input: "$classRegistrations",
+                        as: "reg",
+                        cond: { $eq: ["$$reg._id", "8"] }
+                      }
+                    },
+                    0
+                  ]
+                }
+              },
+              in: { $ifNull: ["$$class8.admitCardCount", 0] }
+            }
+          },
+          admitCardCount10: {
+            $let: {
+              vars: {
+                class10: {
+                  $arrayElemAt: [
+                    {
+                      $filter: {
+                        input: "$classRegistrations",
+                        as: "reg",
+                        cond: { $eq: ["$$reg._id", "10"] }
+                      }
+                    },
+                    0
+                  ]
+                }
+              },
+              in: { $ifNull: ["$$class10.admitCardCount", 0] }
+            }
+          },
           totalRegistrations: {
             $sum: "$classRegistrations.count"
           }
@@ -1020,22 +1198,28 @@ export const MainDashBoard = async (req, res) => {
 
     const result = await District_Block_School.aggregate(aggregationPipeline);
 
-    // ✅ NEW: compute totals WITHOUT touching aggregation
+    // ✅ Compute totals WITHOUT touching aggregation
     let totalCount8 = 0;
     let totalCount10 = 0;
+    let totalAdmitCard8 = 0;
+    let totalAdmitCard10 = 0;
 
     for (const school of result) {
       totalCount8 += Number(school.registrationCount8 || 0);
       totalCount10 += Number(school.registrationCount10 || 0);
+      totalAdmitCard8 += Number(school.admitCardCount8 || 0);
+      totalAdmitCard10 += Number(school.admitCardCount10 || 0);
     }
 
     console.log("Total unique schools processed:", result.length);
 
     res.status(200).json({
       status: "success",
-      data: result,               // 🔒 unchanged
+      data: result,               // 🔒 unchanged structure
       totalCount8,                // ➕ added
       totalCount10,               // ➕ added
+      totalAdmitCard8,           // ➕ NEW: total admit card downloads for class 8
+      totalAdmitCard10,          // ➕ NEW: total admit card downloads for class 10
       message: "Dashboard data fetched successfully"
     });
 
@@ -1047,8 +1231,6 @@ export const MainDashBoard = async (req, res) => {
     });
   }
 };
-
-
 
 
 
