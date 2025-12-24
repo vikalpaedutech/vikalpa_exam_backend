@@ -1215,11 +1215,11 @@ export const MainDashBoard = async (req, res) => {
 
     res.status(200).json({
       status: "success",
-      data: result,               // 🔒 unchanged structure
-      totalCount8,                // ➕ added
-      totalCount10,               // ➕ added
-      totalAdmitCard8,           // ➕ NEW: total admit card downloads for class 8
-      totalAdmitCard10,          // ➕ NEW: total admit card downloads for class 10
+      data: result,               
+      totalCount8,                
+      totalCount10,               
+      totalAdmitCard8,           
+      totalAdmitCard10,          
       message: "Dashboard data fetched successfully"
     });
 
@@ -1231,6 +1231,10 @@ export const MainDashBoard = async (req, res) => {
     });
   }
 };
+
+
+
+
 
 
 

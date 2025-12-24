@@ -240,9 +240,7 @@ export const createStudent = async (req, res) => {
   }
 };
 
-
-
-
+//Patch api can be used
 
 
 //Patch api
@@ -316,7 +314,22 @@ export const updateStudent = async (req, res) => {
 };
 
 
+//Dummy code block below
 
+const dummyTestFunction = () =>{
+
+try {
+  console.log('This is the function that renders the console log')
+} catch (error) {
+  console.log("This is the function that ")
+}
+
+
+}
+
+
+
+//----------------------------------
 
 
 
@@ -566,3 +579,34 @@ export const updateStudentAadhar = async (req, res) => {
     });
   }
 };
+
+
+
+
+
+
+
+
+export const GetAttendanceSheetData = async(req, res) =>{
+
+  const {L1ExaminationCenter} = req.body
+
+  console.log(req.body)
+
+  try {
+    const response = await Student.find({L1ExaminationCenter:L1ExaminationCenter})
+ 
+    return res.status(200).json({
+      ok: true,
+      message: "Data fetched successfully!",
+      data: response,
+    });
+  } catch (error) {
+    console.log("Error occures while updating", error)
+     return res.status(500).json({
+      ok: false,
+      message: "Internal server error",
+      error: err.message,
+    });
+  }
+}
