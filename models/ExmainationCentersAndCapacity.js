@@ -17,7 +17,7 @@ const ExaminationCentersAndCapacitySchema = new Schema(
     examinationLevel: {type: String, default: null},
     requiredPaperCount: {type: Number, default: 0},
     examinationVenueSequenceInBlock: {type: String},
-    
+    attendanceCount: {type: String},
   },
   { timestamps: true }
 );

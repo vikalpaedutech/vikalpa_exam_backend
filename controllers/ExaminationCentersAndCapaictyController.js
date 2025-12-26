@@ -202,3 +202,65 @@ export const GetCentersDataByExaminationAndExamType = async (req, res) =>{
     });
   }
 };
+
+
+
+
+
+
+//Update
+
+
+export const updateExaminationCentersAndCapacity = async (req, res) => {
+  try {
+    const { id, examinationVenueCode, attendanceCount } = req.body;
+
+    console.log('i am inside')
+    console.log(req.body)
+
+    if (!attendanceCount) {
+      return res.status(400).json({
+        success: false,
+        message: "attendanceCount is required",
+      });
+    }
+
+    let filter = {};
+
+    if (id) {
+      filter._id = id;
+    } else if (examinationVenueCode) {
+      filter.examinationVenueCode = examinationVenueCode;
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Either id or examinationVenueCode is required",
+      });
+    }
+
+    const updatedCenter = await ExaminationCentersAndCapacity.findOneAndUpdate(
+      filter,
+      { $set: { attendanceCount } },
+      { new: true }
+    );
+
+    if (!updatedCenter) {
+      return res.status(404).json({
+        success: false,
+        message: "Examination center not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Attendance count updated successfully",
+      data: updatedCenter,
+    });
+  } catch (error) {
+    console.error("Update attendanceCount error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};

@@ -23,8 +23,6 @@ router.post("/admit-card-downloaded", IsAdmitCardDownloaded);
 // Upload dress size PDF for a student
 
 
-
-
 router.post("/update-aadhar", updateStudentAadhar);
 
 router.post("/get-attendance-sheet-data", GetAttendanceSheetData)
