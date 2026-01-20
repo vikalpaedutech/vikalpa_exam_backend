@@ -271,7 +271,11 @@ const StudentSchema = new Schema(
     formCorrectionBy: {type: String, default:null},
     correctedFields: {type: String, default: null},
 
-    
+    isL1QualifiyingCertificateDownloaded: {type: Boolean, default:false},
+    stateRank: {type: String, default: null},
+    districtRankL1: {type: String, default: null},
+    blockRankL1: {type: String, default: null},
+    marksL1: {type: String, default: null},
 
   },
   { timestamps: true }
