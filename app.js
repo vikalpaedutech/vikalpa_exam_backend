@@ -86,6 +86,7 @@ import SendOtpRoute from "./routes/SendOtpRout.js"
 import ABRC_principal_beo_calling from "./routes/ABRC_principal_beo_callingRoute.js"
 import CallLeadsRoute from "./routes/CallLeadsRoute.js"
 import ExaminationCentersAndCapacityRoute from "./routes/ExaminationCentersAndCapacityRoute.js"
+import StudentCallingRoute from "./routes/StudentCallingRoute.js"
 // //using routes for route.g
 
 // app.use('/api', districtRouter);
@@ -100,6 +101,7 @@ app.use("/api", SendOtpRoute);
 app.use("/api", ABRC_principal_beo_calling);
 app.use("/api", CallLeadsRoute);
 app.use("/api", ExaminationCentersAndCapacityRoute);
+app.use("/api", StudentCallingRoute);
 
 // app.use("/api", studentAttendanceRouter);
 // app.use("/api", examAndTestRouter);

@@ -407,514 +407,6 @@ export const GetRegisteredStudentsDataBySchoolAndClass = async (req, res) => {
 
 
 
-// export const MainDashBoard = async (req, res) => {
-
-
-//   console.log('Hello main dashboard')
-// try {
-//  const dashBoardPipline = await District_Block_School.aggregate([
-//   {
-//     $lookup: {
-//       from: "students",
-//       let: { schoolCode: "$schoolCode" },
-//       pipeline: [
-//         { $match: { $expr: { $eq: ["$centerId", "$$schoolCode"] } } },
-//         { $count: "studentCount" }  // only get counts instead of full docs
-//       ],
-//       as: "dashboard"
-//     }
-//   },
-//   {
-//     $addFields: {
-//       studentCount: { $ifNull: [{ $arrayElemAt: ["$dashboard.studentCount", 0] }, 0] }
-//     }
-//   },
-//   {
-//     $project: { dashboard: 0 } // optional, remove full array
-//   }
-// ]);
-
-
-//   res.status(200).json({status:"Ok", data:dashBoardPipline})
-// } catch (error) {
-//   console.error('Erorr', error)
-  
-// }
-
-
-// }
-
-
-
-// export const MainDashBoard = async (req, res) => {
-//   console.log("Hello main dashboard");
-//   try {
-//     const dashBoardPipline = await District_Block_School.aggregate([
-//       {
-//         $lookup: {
-//           from: "students",
-//           let: { schoolCode: "$schoolCode" },
-//           pipeline: [
-//             {
-//               $match: {
-//                 $expr: { $eq: ["$centerId", "$$schoolCode"] },
-//                 isRegisteredBy: { $ne: "" }, // only consider registered students
-//               },
-//             },
-//             {
-//               $group: {
-//                 _id: null,
-//                 regCount8: { $sum: { $cond: [{ $eq: ["$classOfStudent", "8"] }, 1, 0] } },
-//                 regCount10: { $sum: { $cond: [{ $eq: ["$classOfStudent", "10"] }, 1, 0] } },
-//                 isL1AdmitCardDownloadedCount: {
-//                   $sum: { $cond: ["$isL1AdmitCardDownloaded", 1, 0] },
-//                 },
-//                 L1ResultDownloadedCount: {
-//                   $sum: { $cond: ["$L1ResultDownloaded", 1, 0] },
-//                 },
-//                 L1Qualified: { $sum: { $cond: ["$L1Qualified", 1, 0] } },
-//               },
-//             },
-//           ],
-//           as: "dashboard",
-//         },
-//       },
-//       {
-//         $addFields: {
-//           regCount8: { $ifNull: [{ $arrayElemAt: ["$dashboard.regCount8", 0] }, 0] },
-//           regCount10: { $ifNull: [{ $arrayElemAt: ["$dashboard.regCount10", 0] }, 0] },
-//           isL1AdmitCardDownloadedCount: {
-//             $ifNull: [
-//               { $arrayElemAt: ["$dashboard.isL1AdmitCardDownloadedCount", 0] },
-//               0,
-//             ],
-//           },
-//           L1ResultDownloadedCount: {
-//             $ifNull: [{ $arrayElemAt: ["$dashboard.L1ResultDownloadedCount", 0] }, 0],
-//           },
-//           L1Qualified: { $ifNull: [{ $arrayElemAt: ["$dashboard.L1Qualified", 0] }, 0] },
-//         },
-//       },
-//       {
-//         $project: { dashboard: 0 }, // remove full array
-//       },
-//     ]);
-
-//     res.status(200).json({ status: "Ok", data: dashBoardPipline });
-//   } catch (error) {
-//     console.error("Error", error);
-//     res.status(500).json({ status: "error", message: error.message || "Server error" });
-//   }
-// };
-
-
-
-
-// export const MainDashBoard = async (req, res) => {
-//   console.log("Hello main dashboard");
-//   try {
-//     const dashBoardPipline = await District_Block_School.aggregate([
-//       {
-//         $lookup: {
-//           from: "students",
-//           let: { schoolCode: "$schoolCode" },
-//           pipeline: [
-//             {
-//               $match: {
-//                 $expr: { $eq: ["$centerId", "$$schoolCode"] },
-//                 isRegisteredBy: { $ne: "" }, // only consider registered students
-//               },
-//             },
-//             {
-//               $group: {
-//                 _id: "$centerId", // YAHAN CHANGE KARNA HAI - null ki jagah centerId
-//                 // Class 8 counts
-//                 regCount8: { 
-//                   $sum: { 
-//                     $cond: [{ $eq: ["$classOfStudent", "8"] }, 1, 0] 
-//                   } 
-//                 },
-//                 isL1AdmitCardDownloadedCount8: {
-//                   $sum: { 
-//                     $cond: [
-//                       { 
-//                         $and: [
-//                           { $eq: ["$classOfStudent", "8"] },
-//                           "$isL1AdmitCardDownloaded"
-//                         ] 
-//                       }, 
-//                       1, 
-//                       0 
-//                     ] 
-//                   }
-//                 },
-//                 L1ResultDownloadedCount8: {
-//                   $sum: { 
-//                     $cond: [
-//                       { 
-//                         $and: [
-//                           { $eq: ["$classOfStudent", "8"] },
-//                           "$L1ResultDownloaded"
-//                         ] 
-//                       }, 
-//                       1, 
-//                       0 
-//                     ] 
-//                   }
-//                 },
-//                 L1Qualified8: {
-//                   $sum: { 
-//                     $cond: [
-//                       { 
-//                         $and: [
-//                           { $eq: ["$classOfStudent", "8"] },
-//                           "$L1Qualified"
-//                         ] 
-//                       }, 
-//                       1, 
-//                       0 
-//                     ] 
-//                   }
-//                 },
-                
-//                 // Class 10 counts
-//                 regCount10: { 
-//                   $sum: { 
-//                     $cond: [{ $eq: ["$classOfStudent", "10"] }, 1, 0] 
-//                   } 
-//                 },
-//                 isL1AdmitCardDownloadedCount10: {
-//                   $sum: { 
-//                     $cond: [
-//                       { 
-//                         $and: [
-//                           { $eq: ["$classOfStudent", "10"] },
-//                           "$isL1AdmitCardDownloaded"
-//                         ] 
-//                       }, 
-//                       1, 
-//                       0 
-//                     ] 
-//                   }
-//                 },
-//                 L1ResultDownloadedCount10: {
-//                   $sum: { 
-//                     $cond: [
-//                       { 
-//                         $and: [
-//                           { $eq: ["$classOfStudent", "10"] },
-//                           "$L1ResultDownloaded"
-//                         ] 
-//                       }, 
-//                       1, 
-//                       0 
-//                     ] 
-//                   }
-//                 },
-//                 L1Qualified10: {
-//                   $sum: { 
-//                     $cond: [
-//                       { 
-//                         $and: [
-//                           { $eq: ["$classOfStudent", "10"] },
-//                           "$L1Qualified"
-//                         ] 
-//                       }, 
-//                       1, 
-//                       0 
-//                     ] 
-//                   }
-//                 }
-//               },
-//             },
-//           ],
-//           as: "dashboard",
-//         },
-//       },
-//       {
-//         $addFields: {
-//           regCount8: { $ifNull: [{ $arrayElemAt: ["$dashboard.regCount8", 0] }, 0] },
-//           regCount10: { $ifNull: [{ $arrayElemAt: ["$dashboard.regCount10", 0] }, 0] },
-          
-//           isL1AdmitCardDownloadedCount8: {
-//             $ifNull: [
-//               { $arrayElemAt: ["$dashboard.isL1AdmitCardDownloadedCount8", 0] },
-//               0,
-//             ],
-//           },
-//           L1ResultDownloadedCount8: {
-//             $ifNull: [
-//               { $arrayElemAt: ["$dashboard.L1ResultDownloadedCount8", 0] },
-//               0,
-//             ],
-//           },
-//           L1Qualified8: {
-//             $ifNull: [
-//               { $arrayElemAt: ["$dashboard.L1Qualified8", 0] },
-//               0,
-//             ],
-//           },
-          
-//           isL1AdmitCardDownloadedCount10: {
-//             $ifNull: [
-//               { $arrayElemAt: ["$dashboard.isL1AdmitCardDownloadedCount10", 0] },
-//               0,
-//             ],
-//           },
-//           L1ResultDownloadedCount10: {
-//             $ifNull: [
-//               { $arrayElemAt: ["$dashboard.L1ResultDownloadedCount10", 0] },
-//               0,
-//             ],
-//           },
-//           L1Qualified10: {
-//             $ifNull: [
-//               { $arrayElemAt: ["$dashboard.L1Qualified10", 0] },
-//               0,
-//             ],
-//           },
-//         },
-//       },
-//       {
-//         $project: { dashboard: 0 }, // remove full array
-//       },
-//     ]);
-
-//     res.status(200).json({ status: "Ok", data: dashBoardPipline });
-//   } catch (error) {
-//     console.error("Error", error);
-//     res.status(500).json({ status: "error", message: error.message || "Server error" });
-//   }
-// };
-
-
-
-
-
-
-
-
-// export const MainDashBoard = async (req, res) => {
-//   console.log("Hello main dashboard");
-//   try {
-//     const aggregationPipeline = [
-//       {
-//         $lookup: {
-//           from: "students",
-//           let: { centerId: "$centerId" },
-//           pipeline: [
-//             {
-//               $match: {
-//                 $expr: {
-//                   $and: [
-//                     { $eq: ["$schoolCode", "$$centerId"] },
-//                     { $in: ["$classOfStudent", ["8", "10"]] },
-//                     { $and: [
-//                       { $ne: ["$isRegisteredBy", ""] },
-//                       { $ne: ["$isRegisteredBy", null] }
-//                     ]}
-//                   ]
-//                 }
-//               }
-//             },
-//             {
-//               $group: {
-//                 _id: "$classOfStudent",
-//                 count: { $sum: 1 }
-//               }
-//             }
-//           ],
-//           as: "classRegistrations"
-//         }
-//       },
-//       {
-//         $addFields: {
-//           registrationCount8: {
-//             $let: {
-//               vars: {
-//                 class8: {
-//                   $arrayElemAt: [
-//                     {
-//                       $filter: {
-//                         input: "$classRegistrations",
-//                         as: "reg",
-//                         cond: { $eq: ["$$reg._id", "8"] }
-//                       }
-//                     },
-//                     0
-//                   ]
-//                 }
-//               },
-//               in: { $ifNull: ["$$class8.count", 0] }
-//             }
-//           },
-//           registrationCount10: {
-//             $let: {
-//               vars: {
-//                 class10: {
-//                   $arrayElemAt: [
-//                     {
-//                       $filter: {
-//                         input: "$classRegistrations",
-//                         as: "reg",
-//                         cond: { $eq: ["$$reg._id", "10"] }
-//                       }
-//                     },
-//                     0
-//                   ]
-//                 }
-//               },
-//               in: { $ifNull: ["$$class10.count", 0] }
-//             }
-//           },
-//           totalRegistrations: {
-//             $sum: "$classRegistrations.count"
-//           }
-//         }
-//       },
-//       {
-//         $project: {
-//           classRegistrations: 0
-//         }
-//       }
-//     ];
-
-//     const result = await District_Block_School.aggregate(aggregationPipeline);
-    
-//     console.log("Total schools processed:", result.length);
-    
-//     res.status(200).json({ 
-//       status: "success", 
-//       data: result,
-//       message: "Dashboard data fetched successfully" 
-//     });
-    
-//   } catch (error) {
-//     console.error("Error", error);
-//     res.status(500).json({ status: "error", message: error.message || "Server error" });
-//   }
-// };
-
-
-
-
-
-
-
-
-
-
-// export const MainDashBoard = async (req, res) => {
-//   console.log("Hello main dashboard");
-//   try {
-//     const aggregationPipeline = [
-//       // First, group by centerId to remove duplicates and get unique schools
-//       {
-//         $group: {
-//           _id: "$centerId",
-//           doc: { $first: "$$ROOT" }
-//         }
-//       },
-//       {
-//         $replaceRoot: { newRoot: "$doc" }
-//       },
-//       // Then perform the lookup for student counts
-//       {
-//         $lookup: {
-//           from: "students",
-//           let: { centerId: "$centerId" },
-//           pipeline: [
-//             {
-//               $match: {
-//                 $expr: {
-//                   $and: [
-//                     { $eq: ["$schoolCode", "$$centerId"] },
-//                     { $in: ["$classOfStudent", ["8", "10"]] },
-//                     { $and: [
-//                       { $ne: ["$isRegisteredBy", ""] },
-//                       { $ne: ["$isRegisteredBy", null] }
-//                     ]}
-//                   ]
-//                 }
-//               }
-//             },
-//             {
-//               $group: {
-//                 _id: "$classOfStudent",
-//                 count: { $sum: 1 }
-//               }
-//             }
-//           ],
-//           as: "classRegistrations"
-//         }
-//       },
-//       {
-//         $addFields: {
-//           registrationCount8: {
-//             $let: {
-//               vars: {
-//                 class8: {
-//                   $arrayElemAt: [
-//                     {
-//                       $filter: {
-//                         input: "$classRegistrations",
-//                         as: "reg",
-//                         cond: { $eq: ["$$reg._id", "8"] }
-//                       }
-//                     },
-//                     0
-//                   ]
-//                 }
-//               },
-//               in: { $ifNull: ["$$class8.count", 0] }
-//             }
-//           },
-//           registrationCount10: {
-//             $let: {
-//               vars: {
-//                 class10: {
-//                   $arrayElemAt: [
-//                     {
-//                       $filter: {
-//                         input: "$classRegistrations",
-//                         as: "reg",
-//                         cond: { $eq: ["$$reg._id", "10"] }
-//                       }
-//                     },
-//                     0
-//                   ]
-//                 }
-//               },
-//               in: { $ifNull: ["$$class10.count", 0] }
-//             }
-//           },
-//           totalRegistrations: {
-//             $sum: "$classRegistrations.count"
-//           }
-//         }
-//       },
-//       {
-//         $project: {
-//           classRegistrations: 0
-//         }
-//       }
-//     ];
-
-//     const result = await District_Block_School.aggregate(aggregationPipeline);
-    
-//     console.log("Total unique schools processed:", result.length);
-    
-//     res.status(200).json({ 
-//       status: "success", 
-//       data: result,
-//       message: "Dashboard data fetched successfully" 
-//     });
-    
-//   } catch (error) {
-//     console.error("Error", error);
-//     res.status(500).json({ status: "error", message: error.message || "Server error" });
-//   }
-// };
 
 
 
@@ -959,7 +451,16 @@ export const GetRegisteredStudentsDataBySchoolAndClass = async (req, res) => {
 //             {
 //               $group: {
 //                 _id: "$classOfStudent",
-//                 count: { $sum: 1 }
+//                 count: { $sum: 1 },
+//                 admitCardCount: {
+//                   $sum: {
+//                     $cond: [
+//                       { $eq: ["$isL1AdmitCardDownloaded", true] },
+//                       1,
+//                       0
+//                     ]
+//                   }
+//                 }
 //               }
 //             }
 //           ],
@@ -1006,6 +507,44 @@ export const GetRegisteredStudentsDataBySchoolAndClass = async (req, res) => {
 //               in: { $ifNull: ["$$class10.count", 0] }
 //             }
 //           },
+//           admitCardCount8: {
+//             $let: {
+//               vars: {
+//                 class8: {
+//                   $arrayElemAt: [
+//                     {
+//                       $filter: {
+//                         input: "$classRegistrations",
+//                         as: "reg",
+//                         cond: { $eq: ["$$reg._id", "8"] }
+//                       }
+//                     },
+//                     0
+//                   ]
+//                 }
+//               },
+//               in: { $ifNull: ["$$class8.admitCardCount", 0] }
+//             }
+//           },
+//           admitCardCount10: {
+//             $let: {
+//               vars: {
+//                 class10: {
+//                   $arrayElemAt: [
+//                     {
+//                       $filter: {
+//                         input: "$classRegistrations",
+//                         as: "reg",
+//                         cond: { $eq: ["$$reg._id", "10"] }
+//                       }
+//                     },
+//                     0
+//                   ]
+//                 }
+//               },
+//               in: { $ifNull: ["$$class10.admitCardCount", 0] }
+//             }
+//           },
 //           totalRegistrations: {
 //             $sum: "$classRegistrations.count"
 //           }
@@ -1020,22 +559,28 @@ export const GetRegisteredStudentsDataBySchoolAndClass = async (req, res) => {
 
 //     const result = await District_Block_School.aggregate(aggregationPipeline);
 
-//     // ✅ NEW: compute totals WITHOUT touching aggregation
+//     // ✅ Compute totals WITHOUT touching aggregation
 //     let totalCount8 = 0;
 //     let totalCount10 = 0;
+//     let totalAdmitCard8 = 0;
+//     let totalAdmitCard10 = 0;
 
 //     for (const school of result) {
 //       totalCount8 += Number(school.registrationCount8 || 0);
 //       totalCount10 += Number(school.registrationCount10 || 0);
+//       totalAdmitCard8 += Number(school.admitCardCount8 || 0);
+//       totalAdmitCard10 += Number(school.admitCardCount10 || 0);
 //     }
 
 //     console.log("Total unique schools processed:", result.length);
 
 //     res.status(200).json({
 //       status: "success",
-//       data: result,               // 🔒 unchanged
-//       totalCount8,                // ➕ added
-//       totalCount10,               // ➕ added
+//       data: result,               
+//       totalCount8,                
+//       totalCount10,               
+//       totalAdmitCard8,           
+//       totalAdmitCard10,          
 //       message: "Dashboard data fetched successfully"
 //     });
 
@@ -1095,6 +640,34 @@ export const MainDashBoard = async (req, res) => {
                   $sum: {
                     $cond: [
                       { $eq: ["$isL1AdmitCardDownloaded", true] },
+                      1,
+                      0
+                    ]
+                  }
+                },
+                // New fields aggregation
+                l2AdmitCardCount: {
+                  $sum: {
+                    $cond: [
+                      { $eq: ["$isL2AdmitCardDownloaded", true] },
+                      1,
+                      0
+                    ]
+                  }
+                },
+                l1QualifiedCount: {
+                  $sum: {
+                    $cond: [
+                      { $eq: ["$L1Qualified", true] },
+                      1,
+                      0
+                    ]
+                  }
+                },
+                l2QualifiedCount: {
+                  $sum: {
+                    $cond: [
+                      { $eq: ["$L2Qualified", true] },
                       1,
                       0
                     ]
@@ -1184,6 +757,122 @@ export const MainDashBoard = async (req, res) => {
               in: { $ifNull: ["$$class10.admitCardCount", 0] }
             }
           },
+          // New fields calculation for Class 8
+          L1QualifiedCount8: {
+            $let: {
+              vars: {
+                class8: {
+                  $arrayElemAt: [
+                    {
+                      $filter: {
+                        input: "$classRegistrations",
+                        as: "reg",
+                        cond: { $eq: ["$$reg._id", "8"] }
+                      }
+                    },
+                    0
+                  ]
+                }
+              },
+              in: { $ifNull: ["$$class8.l1QualifiedCount", 0] }
+            }
+          },
+          isL2AdmitCardDownloadedCount8: {
+            $let: {
+              vars: {
+                class8: {
+                  $arrayElemAt: [
+                    {
+                      $filter: {
+                        input: "$classRegistrations",
+                        as: "reg",
+                        cond: { $eq: ["$$reg._id", "8"] }
+                      }
+                    },
+                    0
+                  ]
+                }
+              },
+              in: { $ifNull: ["$$class8.l2AdmitCardCount", 0] }
+            }
+          },
+          totalL2QualifiedCount8: {
+            $let: {
+              vars: {
+                class8: {
+                  $arrayElemAt: [
+                    {
+                      $filter: {
+                        input: "$classRegistrations",
+                        as: "reg",
+                        cond: { $eq: ["$$reg._id", "8"] }
+                      }
+                    },
+                    0
+                  ]
+                }
+              },
+              in: { $ifNull: ["$$class8.l2QualifiedCount", 0] }
+            }
+          },
+          // New fields calculation for Class 10
+          L1QualifiedCount10: {
+            $let: {
+              vars: {
+                class10: {
+                  $arrayElemAt: [
+                    {
+                      $filter: {
+                        input: "$classRegistrations",
+                        as: "reg",
+                        cond: { $eq: ["$$reg._id", "10"] }
+                      }
+                    },
+                    0
+                  ]
+                }
+              },
+              in: { $ifNull: ["$$class10.l1QualifiedCount", 0] }
+            }
+          },
+          isL2AdmitCardDownloadedCount10: {
+            $let: {
+              vars: {
+                class10: {
+                  $arrayElemAt: [
+                    {
+                      $filter: {
+                        input: "$classRegistrations",
+                        as: "reg",
+                        cond: { $eq: ["$$reg._id", "10"] }
+                      }
+                    },
+                    0
+                  ]
+                }
+              },
+              in: { $ifNull: ["$$class10.l2AdmitCardCount", 0] }
+            }
+          },
+          totalL2QualifiedCount10: {
+            $let: {
+              vars: {
+                class10: {
+                  $arrayElemAt: [
+                    {
+                      $filter: {
+                        input: "$classRegistrations",
+                        as: "reg",
+                        cond: { $eq: ["$$reg._id", "10"] }
+                      }
+                    },
+                    0
+                  ]
+                }
+              },
+              in: { $ifNull: ["$$class10.l2QualifiedCount", 0] }
+            }
+          },
           totalRegistrations: {
             $sum: "$classRegistrations.count"
           }
@@ -1203,12 +892,24 @@ export const MainDashBoard = async (req, res) => {
     let totalCount10 = 0;
     let totalAdmitCard8 = 0;
     let totalAdmitCard10 = 0;
+    let totalL1Qualified8 = 0;
+    let totalL1Qualified10 = 0;
+    let totalL2AdmitCard8 = 0;
+    let totalL2AdmitCard10 = 0;
+    let totalL2Qualified8 = 0;
+    let totalL2Qualified10 = 0;
 
     for (const school of result) {
       totalCount8 += Number(school.registrationCount8 || 0);
       totalCount10 += Number(school.registrationCount10 || 0);
       totalAdmitCard8 += Number(school.admitCardCount8 || 0);
       totalAdmitCard10 += Number(school.admitCardCount10 || 0);
+      totalL1Qualified8 += Number(school.L1QualifiedCount8 || 0);
+      totalL1Qualified10 += Number(school.L1QualifiedCount10 || 0);
+      totalL2AdmitCard8 += Number(school.isL2AdmitCardDownloadedCount8 || 0);
+      totalL2AdmitCard10 += Number(school.isL2AdmitCardDownloadedCount10 || 0);
+      totalL2Qualified8 += Number(school.totalL2QualifiedCount8 || 0);
+      totalL2Qualified10 += Number(school.totalL2QualifiedCount10 || 0);
     }
 
     console.log("Total unique schools processed:", result.length);
@@ -1219,7 +920,14 @@ export const MainDashBoard = async (req, res) => {
       totalCount8,                
       totalCount10,               
       totalAdmitCard8,           
-      totalAdmitCard10,          
+      totalAdmitCard10,
+      // New total fields
+      totalL1Qualified8,
+      totalL1Qualified10,
+      totalL2AdmitCard8,
+      totalL2AdmitCard10,
+      totalL2Qualified8,
+      totalL2Qualified10,          
       message: "Dashboard data fetched successfully"
     });
 
@@ -1231,6 +939,8 @@ export const MainDashBoard = async (req, res) => {
     });
   }
 };
+
+
 
 
 

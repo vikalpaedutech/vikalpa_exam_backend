@@ -276,6 +276,9 @@ const StudentSchema = new Schema(
     districtRankL1: {type: String, default: null},
     blockRankL1: {type: String, default: null},
     marksL1: {type: String, default: null},
+    omrcontact1:{type: String, default:null},
+    omrcontact2:{type: String, default: null}
+
 
   },
   { timestamps: true }
