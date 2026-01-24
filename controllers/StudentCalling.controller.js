@@ -105,13 +105,14 @@ export const GetTodayCallingStudents = async (req, res) => {
 
 export const UpdateCallingStatus = async (req, res) => {
   try {
-    const { _id, callingStatus, remark } = req.body;
+    const { _id, callingStatus, remark, manualRemark } = req.body;
 
     const updatedStudent = await StudentCalling.findByIdAndUpdate(
       _id,
       {
         callingStatus,
-        remark
+        remark,
+        manualRemark
       },
       { new: true }
     );

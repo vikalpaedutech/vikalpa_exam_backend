@@ -30,7 +30,9 @@ const StudentCallingSchema = new Schema(
     callingDate: {
       type: Date,
       default: Date.now
-    }
+    },
+
+    manualRemark: {type: String, default:null}
   },
   { timestamps: true }
 );
