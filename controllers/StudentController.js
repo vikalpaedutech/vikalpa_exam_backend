@@ -589,12 +589,12 @@ export const updateStudentAadhar = async (req, res) => {
 
 export const GetAttendanceSheetData = async(req, res) =>{
 
-  const {L1ExaminationCenter} = req.body
+  const {L2ExaminationCenter} = req.body
 
   console.log(req.body)
 
   try {
-    const response = await Student.find({L1ExaminationCenter:L1ExaminationCenter})
+    const response = await Student.find({L2ExaminationCenter:L2ExaminationCenter})
  
     return res.status(200).json({
       ok: true,

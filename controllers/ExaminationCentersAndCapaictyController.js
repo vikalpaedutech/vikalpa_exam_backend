@@ -162,7 +162,7 @@ export const GetCentersDataByExaminationAndExamType = async (req, res) =>{
     // const { examinationLevel, examType, districtId, blockId, examinationVenueCode } = req.body;
     
     
-    const examinationLevel = "1"
+    const examinationLevel = "2"
     const examType = "MB"
     
     
