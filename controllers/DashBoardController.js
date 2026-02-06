@@ -414,190 +414,6 @@ export const GetRegisteredStudentsDataBySchoolAndClass = async (req, res) => {
 
 
 
-// export const MainDashBoard = async (req, res) => {
-//   console.log("Hello main dashboard");
-//   try {
-//     const aggregationPipeline = [
-//       {
-//         $group: {
-//           _id: "$centerId",
-//           doc: { $first: "$$ROOT" }
-//         }
-//       },
-//       {
-//         $replaceRoot: { newRoot: "$doc" }
-//       },
-//       {
-//         $lookup: {
-//           from: "students",
-//           let: { centerId: "$centerId" },
-//           pipeline: [
-//             {
-//               $match: {
-//                 $expr: {
-//                   $and: [
-//                     { $eq: ["$schoolCode", "$$centerId"] },
-//                     { $in: ["$classOfStudent", ["8", "10"]] },
-//                     {
-//                       $and: [
-//                         { $ne: ["$isRegisteredBy", ""] },
-//                         { $ne: ["$isRegisteredBy", null] }
-//                       ]
-//                     }
-//                   ]
-//                 }
-//               }
-//             },
-//             {
-//               $group: {
-//                 _id: "$classOfStudent",
-//                 count: { $sum: 1 },
-//                 admitCardCount: {
-//                   $sum: {
-//                     $cond: [
-//                       { $eq: ["$isL1AdmitCardDownloaded", true] },
-//                       1,
-//                       0
-//                     ]
-//                   }
-//                 }
-//               }
-//             }
-//           ],
-//           as: "classRegistrations"
-//         }
-//       },
-//       {
-//         $addFields: {
-//           registrationCount8: {
-//             $let: {
-//               vars: {
-//                 class8: {
-//                   $arrayElemAt: [
-//                     {
-//                       $filter: {
-//                         input: "$classRegistrations",
-//                         as: "reg",
-//                         cond: { $eq: ["$$reg._id", "8"] }
-//                       }
-//                     },
-//                     0
-//                   ]
-//                 }
-//               },
-//               in: { $ifNull: ["$$class8.count", 0] }
-//             }
-//           },
-//           registrationCount10: {
-//             $let: {
-//               vars: {
-//                 class10: {
-//                   $arrayElemAt: [
-//                     {
-//                       $filter: {
-//                         input: "$classRegistrations",
-//                         as: "reg",
-//                         cond: { $eq: ["$$reg._id", "10"] }
-//                       }
-//                     },
-//                     0
-//                   ]
-//                 }
-//               },
-//               in: { $ifNull: ["$$class10.count", 0] }
-//             }
-//           },
-//           admitCardCount8: {
-//             $let: {
-//               vars: {
-//                 class8: {
-//                   $arrayElemAt: [
-//                     {
-//                       $filter: {
-//                         input: "$classRegistrations",
-//                         as: "reg",
-//                         cond: { $eq: ["$$reg._id", "8"] }
-//                       }
-//                     },
-//                     0
-//                   ]
-//                 }
-//               },
-//               in: { $ifNull: ["$$class8.admitCardCount", 0] }
-//             }
-//           },
-//           admitCardCount10: {
-//             $let: {
-//               vars: {
-//                 class10: {
-//                   $arrayElemAt: [
-//                     {
-//                       $filter: {
-//                         input: "$classRegistrations",
-//                         as: "reg",
-//                         cond: { $eq: ["$$reg._id", "10"] }
-//                       }
-//                     },
-//                     0
-//                   ]
-//                 }
-//               },
-//               in: { $ifNull: ["$$class10.admitCardCount", 0] }
-//             }
-//           },
-//           totalRegistrations: {
-//             $sum: "$classRegistrations.count"
-//           }
-//         }
-//       },
-//       {
-//         $project: {
-//           classRegistrations: 0
-//         }
-//       }
-//     ];
-
-//     const result = await District_Block_School.aggregate(aggregationPipeline);
-
-//     // ✅ Compute totals WITHOUT touching aggregation
-//     let totalCount8 = 0;
-//     let totalCount10 = 0;
-//     let totalAdmitCard8 = 0;
-//     let totalAdmitCard10 = 0;
-
-//     for (const school of result) {
-//       totalCount8 += Number(school.registrationCount8 || 0);
-//       totalCount10 += Number(school.registrationCount10 || 0);
-//       totalAdmitCard8 += Number(school.admitCardCount8 || 0);
-//       totalAdmitCard10 += Number(school.admitCardCount10 || 0);
-//     }
-
-//     console.log("Total unique schools processed:", result.length);
-
-//     res.status(200).json({
-//       status: "success",
-//       data: result,               
-//       totalCount8,                
-//       totalCount10,               
-//       totalAdmitCard8,           
-//       totalAdmitCard10,          
-//       message: "Dashboard data fetched successfully"
-//     });
-
-//   } catch (error) {
-//     console.error("Error", error);
-//     res.status(500).json({
-//       status: "error",
-//       message: error.message || "Server error"
-//     });
-//   }
-// };
-
-
-
-
-
-
 export const MainDashBoard = async (req, res) => {
   console.log("Hello main dashboard");
   try {
@@ -640,34 +456,6 @@ export const MainDashBoard = async (req, res) => {
                   $sum: {
                     $cond: [
                       { $eq: ["$isL1AdmitCardDownloaded", true] },
-                      1,
-                      0
-                    ]
-                  }
-                },
-                // New fields aggregation
-                l2AdmitCardCount: {
-                  $sum: {
-                    $cond: [
-                      { $eq: ["$isL2AdmitCardDownloaded", true] },
-                      1,
-                      0
-                    ]
-                  }
-                },
-                l1QualifiedCount: {
-                  $sum: {
-                    $cond: [
-                      { $eq: ["$L1Qualified", true] },
-                      1,
-                      0
-                    ]
-                  }
-                },
-                l2QualifiedCount: {
-                  $sum: {
-                    $cond: [
-                      { $eq: ["$L2Qualified", true] },
                       1,
                       0
                     ]
@@ -757,122 +545,6 @@ export const MainDashBoard = async (req, res) => {
               in: { $ifNull: ["$$class10.admitCardCount", 0] }
             }
           },
-          // New fields calculation for Class 8
-          L1QualifiedCount8: {
-            $let: {
-              vars: {
-                class8: {
-                  $arrayElemAt: [
-                    {
-                      $filter: {
-                        input: "$classRegistrations",
-                        as: "reg",
-                        cond: { $eq: ["$$reg._id", "8"] }
-                      }
-                    },
-                    0
-                  ]
-                }
-              },
-              in: { $ifNull: ["$$class8.l1QualifiedCount", 0] }
-            }
-          },
-          isL2AdmitCardDownloadedCount8: {
-            $let: {
-              vars: {
-                class8: {
-                  $arrayElemAt: [
-                    {
-                      $filter: {
-                        input: "$classRegistrations",
-                        as: "reg",
-                        cond: { $eq: ["$$reg._id", "8"] }
-                      }
-                    },
-                    0
-                  ]
-                }
-              },
-              in: { $ifNull: ["$$class8.l2AdmitCardCount", 0] }
-            }
-          },
-          totalL2QualifiedCount8: {
-            $let: {
-              vars: {
-                class8: {
-                  $arrayElemAt: [
-                    {
-                      $filter: {
-                        input: "$classRegistrations",
-                        as: "reg",
-                        cond: { $eq: ["$$reg._id", "8"] }
-                      }
-                    },
-                    0
-                  ]
-                }
-              },
-              in: { $ifNull: ["$$class8.l2QualifiedCount", 0] }
-            }
-          },
-          // New fields calculation for Class 10
-          L1QualifiedCount10: {
-            $let: {
-              vars: {
-                class10: {
-                  $arrayElemAt: [
-                    {
-                      $filter: {
-                        input: "$classRegistrations",
-                        as: "reg",
-                        cond: { $eq: ["$$reg._id", "10"] }
-                      }
-                    },
-                    0
-                  ]
-                }
-              },
-              in: { $ifNull: ["$$class10.l1QualifiedCount", 0] }
-            }
-          },
-          isL2AdmitCardDownloadedCount10: {
-            $let: {
-              vars: {
-                class10: {
-                  $arrayElemAt: [
-                    {
-                      $filter: {
-                        input: "$classRegistrations",
-                        as: "reg",
-                        cond: { $eq: ["$$reg._id", "10"] }
-                      }
-                    },
-                    0
-                  ]
-                }
-              },
-              in: { $ifNull: ["$$class10.l2AdmitCardCount", 0] }
-            }
-          },
-          totalL2QualifiedCount10: {
-            $let: {
-              vars: {
-                class10: {
-                  $arrayElemAt: [
-                    {
-                      $filter: {
-                        input: "$classRegistrations",
-                        as: "reg",
-                        cond: { $eq: ["$$reg._id", "10"] }
-                      }
-                    },
-                    0
-                  ]
-                }
-              },
-              in: { $ifNull: ["$$class10.l2QualifiedCount", 0] }
-            }
-          },
           totalRegistrations: {
             $sum: "$classRegistrations.count"
           }
@@ -892,24 +564,12 @@ export const MainDashBoard = async (req, res) => {
     let totalCount10 = 0;
     let totalAdmitCard8 = 0;
     let totalAdmitCard10 = 0;
-    let totalL1Qualified8 = 0;
-    let totalL1Qualified10 = 0;
-    let totalL2AdmitCard8 = 0;
-    let totalL2AdmitCard10 = 0;
-    let totalL2Qualified8 = 0;
-    let totalL2Qualified10 = 0;
 
     for (const school of result) {
       totalCount8 += Number(school.registrationCount8 || 0);
       totalCount10 += Number(school.registrationCount10 || 0);
       totalAdmitCard8 += Number(school.admitCardCount8 || 0);
       totalAdmitCard10 += Number(school.admitCardCount10 || 0);
-      totalL1Qualified8 += Number(school.L1QualifiedCount8 || 0);
-      totalL1Qualified10 += Number(school.L1QualifiedCount10 || 0);
-      totalL2AdmitCard8 += Number(school.isL2AdmitCardDownloadedCount8 || 0);
-      totalL2AdmitCard10 += Number(school.isL2AdmitCardDownloadedCount10 || 0);
-      totalL2Qualified8 += Number(school.totalL2QualifiedCount8 || 0);
-      totalL2Qualified10 += Number(school.totalL2QualifiedCount10 || 0);
     }
 
     console.log("Total unique schools processed:", result.length);
@@ -920,14 +580,7 @@ export const MainDashBoard = async (req, res) => {
       totalCount8,                
       totalCount10,               
       totalAdmitCard8,           
-      totalAdmitCard10,
-      // New total fields
-      totalL1Qualified8,
-      totalL1Qualified10,
-      totalL2AdmitCard8,
-      totalL2AdmitCard10,
-      totalL2Qualified8,
-      totalL2Qualified10,          
+      totalAdmitCard10,          
       message: "Dashboard data fetched successfully"
     });
 
@@ -939,6 +592,356 @@ export const MainDashBoard = async (req, res) => {
     });
   }
 };
+
+
+
+
+
+
+
+
+
+// export const MainDashBoard = async (req, res) => {
+//   console.log("Hello main dashboard");
+//   try {
+//     const aggregationPipeline = [
+//       {
+//         $group: {
+//           _id: "$centerId",
+//           doc: { $first: "$$ROOT" }
+//         }
+//       },
+//       {
+//         $replaceRoot: { newRoot: "$doc" }
+//       },
+//       {
+//         $lookup: {
+//           from: "students",
+//           let: { centerId: "$centerId" },
+//           pipeline: [
+//             {
+//               $match: {
+//                 $expr: {
+//                   $and: [
+//                     { $eq: ["$schoolCode", "$$centerId"] },
+//                     { $in: ["$classOfStudent", ["8", "10"]] },
+//                     {
+//                       $and: [
+//                         { $ne: ["$isRegisteredBy", ""] },
+//                         { $ne: ["$isRegisteredBy", null] }
+//                       ]
+//                     }
+//                   ]
+//                 }
+//               }
+//             },
+//             {
+//               $group: {
+//                 _id: "$classOfStudent",
+//                 count: { $sum: 1 },
+//                 admitCardCount: {
+//                   $sum: {
+//                     $cond: [
+//                       { $eq: ["$isL1AdmitCardDownloaded", true] },
+//                       1,
+//                       0
+//                     ]
+//                   }
+//                 },
+//                 // New fields aggregation
+//                 l2AdmitCardCount: {
+//                   $sum: {
+//                     $cond: [
+//                       { $eq: ["$isL2AdmitCardDownloaded", true] },
+//                       1,
+//                       0
+//                     ]
+//                   }
+//                 },
+//                 l1QualifiedCount: {
+//                   $sum: {
+//                     $cond: [
+//                       { $eq: ["$L1Qualified", true] },
+//                       1,
+//                       0
+//                     ]
+//                   }
+//                 },
+//                 l2QualifiedCount: {
+//                   $sum: {
+//                     $cond: [
+//                       { $eq: ["$L2Qualified", true] },
+//                       1,
+//                       0
+//                     ]
+//                   }
+//                 }
+//               }
+//             }
+//           ],
+//           as: "classRegistrations"
+//         }
+//       },
+//       {
+//         $addFields: {
+//           registrationCount8: {
+//             $let: {
+//               vars: {
+//                 class8: {
+//                   $arrayElemAt: [
+//                     {
+//                       $filter: {
+//                         input: "$classRegistrations",
+//                         as: "reg",
+//                         cond: { $eq: ["$$reg._id", "8"] }
+//                       }
+//                     },
+//                     0
+//                   ]
+//                 }
+//               },
+//               in: { $ifNull: ["$$class8.count", 0] }
+//             }
+//           },
+//           registrationCount10: {
+//             $let: {
+//               vars: {
+//                 class10: {
+//                   $arrayElemAt: [
+//                     {
+//                       $filter: {
+//                         input: "$classRegistrations",
+//                         as: "reg",
+//                         cond: { $eq: ["$$reg._id", "10"] }
+//                       }
+//                     },
+//                     0
+//                   ]
+//                 }
+//               },
+//               in: { $ifNull: ["$$class10.count", 0] }
+//             }
+//           },
+//           admitCardCount8: {
+//             $let: {
+//               vars: {
+//                 class8: {
+//                   $arrayElemAt: [
+//                     {
+//                       $filter: {
+//                         input: "$classRegistrations",
+//                         as: "reg",
+//                         cond: { $eq: ["$$reg._id", "8"] }
+//                       }
+//                     },
+//                     0
+//                   ]
+//                 }
+//               },
+//               in: { $ifNull: ["$$class8.admitCardCount", 0] }
+//             }
+//           },
+//           admitCardCount10: {
+//             $let: {
+//               vars: {
+//                 class10: {
+//                   $arrayElemAt: [
+//                     {
+//                       $filter: {
+//                         input: "$classRegistrations",
+//                         as: "reg",
+//                         cond: { $eq: ["$$reg._id", "10"] }
+//                       }
+//                     },
+//                     0
+//                   ]
+//                 }
+//               },
+//               in: { $ifNull: ["$$class10.admitCardCount", 0] }
+//             }
+//           },
+//           // New fields calculation for Class 8
+//           L1QualifiedCount8: {
+//             $let: {
+//               vars: {
+//                 class8: {
+//                   $arrayElemAt: [
+//                     {
+//                       $filter: {
+//                         input: "$classRegistrations",
+//                         as: "reg",
+//                         cond: { $eq: ["$$reg._id", "8"] }
+//                       }
+//                     },
+//                     0
+//                   ]
+//                 }
+//               },
+//               in: { $ifNull: ["$$class8.l1QualifiedCount", 0] }
+//             }
+//           },
+//           isL2AdmitCardDownloadedCount8: {
+//             $let: {
+//               vars: {
+//                 class8: {
+//                   $arrayElemAt: [
+//                     {
+//                       $filter: {
+//                         input: "$classRegistrations",
+//                         as: "reg",
+//                         cond: { $eq: ["$$reg._id", "8"] }
+//                       }
+//                     },
+//                     0
+//                   ]
+//                 }
+//               },
+//               in: { $ifNull: ["$$class8.l2AdmitCardCount", 0] }
+//             }
+//           },
+//           totalL2QualifiedCount8: {
+//             $let: {
+//               vars: {
+//                 class8: {
+//                   $arrayElemAt: [
+//                     {
+//                       $filter: {
+//                         input: "$classRegistrations",
+//                         as: "reg",
+//                         cond: { $eq: ["$$reg._id", "8"] }
+//                       }
+//                     },
+//                     0
+//                   ]
+//                 }
+//               },
+//               in: { $ifNull: ["$$class8.l2QualifiedCount", 0] }
+//             }
+//           },
+//           // New fields calculation for Class 10
+//           L1QualifiedCount10: {
+//             $let: {
+//               vars: {
+//                 class10: {
+//                   $arrayElemAt: [
+//                     {
+//                       $filter: {
+//                         input: "$classRegistrations",
+//                         as: "reg",
+//                         cond: { $eq: ["$$reg._id", "10"] }
+//                       }
+//                     },
+//                     0
+//                   ]
+//                 }
+//               },
+//               in: { $ifNull: ["$$class10.l1QualifiedCount", 0] }
+//             }
+//           },
+//           isL2AdmitCardDownloadedCount10: {
+//             $let: {
+//               vars: {
+//                 class10: {
+//                   $arrayElemAt: [
+//                     {
+//                       $filter: {
+//                         input: "$classRegistrations",
+//                         as: "reg",
+//                         cond: { $eq: ["$$reg._id", "10"] }
+//                       }
+//                     },
+//                     0
+//                   ]
+//                 }
+//               },
+//               in: { $ifNull: ["$$class10.l2AdmitCardCount", 0] }
+//             }
+//           },
+//           totalL2QualifiedCount10: {
+//             $let: {
+//               vars: {
+//                 class10: {
+//                   $arrayElemAt: [
+//                     {
+//                       $filter: {
+//                         input: "$classRegistrations",
+//                         as: "reg",
+//                         cond: { $eq: ["$$reg._id", "10"] }
+//                       }
+//                     },
+//                     0
+//                   ]
+//                 }
+//               },
+//               in: { $ifNull: ["$$class10.l2QualifiedCount", 0] }
+//             }
+//           },
+//           totalRegistrations: {
+//             $sum: "$classRegistrations.count"
+//           }
+//         }
+//       },
+//       {
+//         $project: {
+//           classRegistrations: 0
+//         }
+//       }
+//     ];
+
+//     const result = await District_Block_School.aggregate(aggregationPipeline);
+
+//     // ✅ Compute totals WITHOUT touching aggregation
+//     let totalCount8 = 0;
+//     let totalCount10 = 0;
+//     let totalAdmitCard8 = 0;
+//     let totalAdmitCard10 = 0;
+//     let totalL1Qualified8 = 0;
+//     let totalL1Qualified10 = 0;
+//     let totalL2AdmitCard8 = 0;
+//     let totalL2AdmitCard10 = 0;
+//     let totalL2Qualified8 = 0;
+//     let totalL2Qualified10 = 0;
+
+//     for (const school of result) {
+//       totalCount8 += Number(school.registrationCount8 || 0);
+//       totalCount10 += Number(school.registrationCount10 || 0);
+//       totalAdmitCard8 += Number(school.admitCardCount8 || 0);
+//       totalAdmitCard10 += Number(school.admitCardCount10 || 0);
+//       totalL1Qualified8 += Number(school.L1QualifiedCount8 || 0);
+//       totalL1Qualified10 += Number(school.L1QualifiedCount10 || 0);
+//       totalL2AdmitCard8 += Number(school.isL2AdmitCardDownloadedCount8 || 0);
+//       totalL2AdmitCard10 += Number(school.isL2AdmitCardDownloadedCount10 || 0);
+//       totalL2Qualified8 += Number(school.totalL2QualifiedCount8 || 0);
+//       totalL2Qualified10 += Number(school.totalL2QualifiedCount10 || 0);
+//     }
+
+//     console.log("Total unique schools processed:", result.length);
+
+//     res.status(200).json({
+//       status: "success",
+//       data: result,               
+//       totalCount8,                
+//       totalCount10,               
+//       totalAdmitCard8,           
+//       totalAdmitCard10,
+//       // New total fields
+//       totalL1Qualified8,
+//       totalL1Qualified10,
+//       totalL2AdmitCard8,
+//       totalL2AdmitCard10,
+//       totalL2Qualified8,
+//       totalL2Qualified10,          
+//       message: "Dashboard data fetched successfully"
+//     });
+
+//   } catch (error) {
+//     console.error("Error", error);
+//     res.status(500).json({
+//       status: "error",
+//       message: error.message || "Server error"
+//     });
+//   }
+// };
 
 
 
