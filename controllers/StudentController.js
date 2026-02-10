@@ -589,12 +589,17 @@ export const updateStudentAadhar = async (req, res) => {
 
 export const GetAttendanceSheetData = async(req, res) =>{
 
-  const {L2ExaminationCenter} = req.body
+  const {L1ExaminationCenter} = req.body
 
+
+  console.log('helloo')
   console.log(req.body)
 
+  //for class wise separation
+  const classOfStudent = "10"
+
   try {
-    const response = await Student.find({L2ExaminationCenter:L2ExaminationCenter})
+    const response = await Student.find({L1ExaminationCenter:L1ExaminationCenter, classOfStudent:classOfStudent})
  
     return res.status(200).json({
       ok: true,
