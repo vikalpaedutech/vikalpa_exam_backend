@@ -162,8 +162,8 @@ export const GetCentersDataByExaminationAndExamType = async (req, res) =>{
     // const { examinationLevel, examType, districtId, blockId, examinationVenueCode } = req.body;
     
     
-    const examinationLevel = "1"
-    const examType = "HS100"
+    const examinationLevel = "3"
+    const examType = "MB"
     
     
     // Check if required parameters are provided

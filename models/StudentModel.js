@@ -277,7 +277,8 @@ const StudentSchema = new Schema(
     blockRankL1: {type: String, default: null},
     marksL1: {type: String, default: null},
     omrcontact1:{type: String, default:null},
-    omrcontact2:{type: String, default: null}
+    omrcontact2:{type: String, default: null},
+    orientationRoomNumber:{type: String, default: null}
 
 
   },
