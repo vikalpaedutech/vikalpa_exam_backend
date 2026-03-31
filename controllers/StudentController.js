@@ -615,3 +615,37 @@ export const GetAttendanceSheetData = async(req, res) =>{
     });
   }
 }
+
+
+
+
+
+//Below is being created for orientation certificate, so that only l2qualified students be fetched
+
+
+export const FetchMbL2QualifiedStudent = async (req, res) => {
+
+
+
+  try {
+
+    const response = await Student.find({L2Qualified: true})
+
+    
+    return res.status(200).json({
+      ok: true,
+      datalength: response.length,
+      message: "Data fetched successfully!",
+      data: response,
+    });  
+
+  } catch (error) {
+    
+    return res.status(500).json({
+      ok: false,
+      message: "Internal server error",
+      error: err.message,
+    });
+
+  }
+}
