@@ -649,3 +649,61 @@ export const FetchMbL2QualifiedStudent = async (req, res) => {
 
   }
 }
+
+
+
+
+//Updatin l3 attendance value for missino buniyaad
+export const markL3AttendanceOfStudents = async (req, res) => {
+
+
+  const { _id, isPresentInL3Examination } = req.body;
+
+  console.log('mark level 3 attendance', req.body)
+  
+  // Validation
+  if (!_id) {
+    return res.status(400).json({ 
+      status: 'Not OK', 
+      message: 'Student ID is required' 
+    });
+  }
+  
+  if (isPresentInL3Examination === undefined) {
+    return res.status(400).json({ 
+      status: 'Not OK', 
+      message: 'Attendance status is required' 
+    });
+  }
+  
+  try {
+    const response = await Student.findByIdAndUpdate(
+      _id,  // Just pass the ID directly
+      { $set: { isPresentInL3Examination } },
+      { 
+        new: true,  // Return updated document instead of original
+        runValidators: true  // Run schema validations
+      }
+    );
+    
+    if (!response) {
+      return res.status(404).json({ 
+        status: 'Not OK', 
+        message: 'Student not found' 
+      });
+    }
+    
+    res.status(200).json({ 
+      status: 'OK', 
+      message: 'Attendance updated', 
+      data: response 
+    });
+    
+  } catch (error) {
+    console.error(error); // Log the actual error for debugging
+    res.status(500).json({ 
+      status: 'Not OK', 
+      message: 'Some error occurred' 
+    });
+  }
+}
