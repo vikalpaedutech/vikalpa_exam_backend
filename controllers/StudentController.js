@@ -620,6 +620,41 @@ export const GetAttendanceSheetData = async(req, res) =>{
 
 
 
+export const GetAttendanceSheetDataS100 = async(req, res) =>{
+
+  const {L2ExaminationCenter, batchDivisionForL2Examination, selectionStatusForL2, gender} = req.body
+
+  console.log('I am insisde Student Controller at line 594')
+  console.log('helloo')
+  console.log(req.body)
+
+  //for class wise separation
+  const classOfStudent = "8"
+
+  try {
+    const response = await Student.find({L2ExaminationCenter:L2ExaminationCenter,
+       batchDivisionForL2Examination:batchDivisionForL2Examination, selectionStatusForL2:selectionStatusForL2,
+      gender:gender})
+ 
+    return res.status(200).json({
+      ok: true,
+      message: "Data fetched successfully!",
+      data: response,
+    });
+  } catch (error) {
+    console.log("Error occures while updating", error)
+     return res.status(500).json({
+      ok: false,
+      message: "Internal server error",
+      error: err.message,
+    });
+  }
+}
+
+
+
+
+
 //Below is being created for orientation certificate, so that only l2qualified students be fetched
 
 
