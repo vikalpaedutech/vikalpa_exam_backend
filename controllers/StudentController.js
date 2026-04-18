@@ -5,6 +5,7 @@ import path from "path";
 import multer from "multer";
 import { Student } from "../models/StudentModel.js"; // adjust path if needed
 import { uploadToDOStorage } from "../utils/digitalOceanSpaces.util.js"; // adjust path/filename if needed
+import { arrayBuffer } from "stream/consumers";
 
 // ------------------ MULTER SETUP ------------------
 // memoryStorage so we can upload directly from buffer
@@ -628,13 +629,24 @@ export const GetAttendanceSheetDataS100 = async(req, res) =>{
   console.log('helloo')
   console.log(req.body)
 
+
+  let genderArray = []
+
+  if (req.body.gender === 'BOTH'){
+    genderArray = ["MALE", "FEMALE"]
+  } else {
+    genderArray.push(req.body.gender)
+  }
+
+  console.log(genderArray)
+
   //for class wise separation
   const classOfStudent = "8"
 
   try {
     const response = await Student.find({L2ExaminationCenter:L2ExaminationCenter,
        batchDivisionForL2Examination:batchDivisionForL2Examination, selectionStatusForL2:selectionStatusForL2,
-      gender:{$in:[gender || 'MALE', 'FEMALE']}})
+      gender:{$in:genderArray}})
  
     return res.status(200).json({
       ok: true,
