@@ -634,7 +634,7 @@ export const GetAttendanceSheetDataS100 = async(req, res) =>{
   try {
     const response = await Student.find({L2ExaminationCenter:L2ExaminationCenter,
        batchDivisionForL2Examination:batchDivisionForL2Examination, selectionStatusForL2:selectionStatusForL2,
-      gender:gender})
+      gender:{$in:[gender || 'MALE', 'FEMALE']}})
  
     return res.status(200).json({
       ok: true,
