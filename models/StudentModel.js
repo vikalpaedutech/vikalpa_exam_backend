@@ -278,7 +278,13 @@ const StudentSchema = new Schema(
     marksL1: {type: String, default: null},
     omrcontact1:{type: String, default:null},
     omrcontact2:{type: String, default: null},
-    orientationRoomNumber:{type: String, default: null}
+    orientationRoomNumber:{type: String, default: null},
+    iscounsellingAdmitCardDownloaded:{type: Boolean, default: false},
+    counsellingVenue:{type: String},
+    counsellingDate:{type: Date},
+    counsellingRoomNumber:{type: String},
+    cousellingReportingTime:{type: String}
+
 
 
   },
