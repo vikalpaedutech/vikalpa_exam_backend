@@ -665,6 +665,226 @@ export const GetAttendanceSheetDataS100 = async(req, res) =>{
 
 
 
+//For counselling
+
+
+
+
+export const GetAttendanceSheetDataCounselling = async(req, res) =>{
+
+  const {counsellingVenue, selectionStatusForL3, gender} = req.body
+
+  console.log('I am insisde Student Controller at line 677')
+  console.log('helloo')
+  console.log(req.body)
+
+
+
+
+  //for class wise separation
+  const classOfStudent = "8"
+
+  try {
+    const response = await Student.find({counsellingVenue:counsellingVenue})
+ 
+    return res.status(200).json({
+      ok: true,
+      message: "Data fetched successfully!",
+      data: response,
+    });
+  } catch (error) {
+    console.log("Error occures while updating", error)
+     return res.status(500).json({
+      ok: false,
+      message: "Internal server error",
+      error: err.message,
+    });
+  }
+}
+
+
+
+
+
+
+
+
+
+
+//Marking counselling attendance and generating token using "Database Atomic Operations".
+
+// Import TokenCounter model (create this model first)
+const TokenCounterSchema = new mongoose.Schema({
+  counsellingVenue: { type: String, required: true },
+  date: { type: String, required: true }, // Format: YYYY-MM-DD
+  currentToken: { type: Number, default: 0 }
+});
+
+// Create compound unique index
+TokenCounterSchema.index({ counsellingVenue: 1, date: 1 }, { unique: true });
+const TokenCounter = mongoose.model('TokenCounter', TokenCounterSchema);
+
+// Main Controller Function
+export const MarkCounsellingAttendance = async (req, res) => {
+  const { studentId, counsellingVenue, attendanceStatus } = req.body;
+
+  console.log(req.body)
+  // Validation
+  if (!studentId || !counsellingVenue) {
+    return res.status(400).json({
+      ok: false,
+      message: "Student ID and Counselling Venue are required"
+    });
+  }
+
+  if (typeof attendanceStatus !== 'boolean') {
+    return res.status(400).json({
+      ok: false,
+      message: "Attendance status must be a boolean value"
+    });
+  }
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+    let tokenNumber = 0;
+
+    // If marking as PRESENT, generate new token
+    if (attendanceStatus === true) {
+      // ATOMIC OPERATION: Get next token number
+      const counter = await TokenCounter.findOneAndUpdate(
+        { 
+          counsellingVenue: counsellingVenue,
+          date: currentDate 
+        },
+        { $inc: { currentToken: 1 } },
+        { 
+          upsert: true, 
+          new: true,
+          session 
+        }
+      );
+      
+      tokenNumber = counter.currentToken;
+    }
+
+    // Update student attendance and token
+    const updatedStudent = await Student.findByIdAndUpdate(
+      studentId,
+      {
+        counsellingAttendance: attendanceStatus,
+        counsellingTokenNumber: tokenNumber,
+        counsellingVenue: counsellingVenue,
+        counsellingDate: new Date(),
+        updatedAt: new Date()
+      },
+      { 
+        new: true,
+        session,
+        runValidators: false // Skip validation for optional fields
+      }
+    );
+
+    if (!updatedStudent) {
+      throw new Error("Student not found");
+    }
+
+    await session.commitTransaction();
+
+    return res.status(200).json({
+      ok: true,
+      message: attendanceStatus ? "Attendance marked successfully" : "Attendance removed successfully",
+      data: {
+        student: {
+          _id: updatedStudent._id,
+          name: updatedStudent.name,
+          srn: updatedStudent.srn,
+          counsellingAttendance: updatedStudent.counsellingAttendance,
+          counsellingTokenNumber: updatedStudent.counsellingTokenNumber,
+          counsellingVenue: updatedStudent.counsellingVenue
+        },
+        tokenNumber: tokenNumber,
+        venue: counsellingVenue,
+        date: currentDate
+      }
+    });
+
+  } catch (error) {
+    await session.abortSession();
+    console.error("Error marking attendance:", error);
+    
+    return res.status(500).json({
+      ok: false,
+      message: "Failed to mark attendance",
+      error: error.message
+    });
+  } finally {
+    session.endSession();
+  }
+};
+
+// Optional: Get token status for a venue
+export const GetTokenStatus = async (req, res) => {
+  const { counsellingVenue } = req.params;
+  const currentDate = new Date().toISOString().split('T')[0];
+
+  try {
+    const counter = await TokenCounter.findOne({
+      counsellingVenue: counsellingVenue,
+      date: currentDate
+    });
+
+    return res.status(200).json({
+      ok: true,
+      data: {
+        venue: counsellingVenue,
+        date: currentDate,
+        lastTokenIssued: counter ? counter.currentToken : 0,
+        nextToken: counter ? counter.currentToken + 1 : 1
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      message: "Failed to fetch token status",
+      error: error.message
+    });
+  }
+};
+
+// Optional: Get all students attendance for a venue
+export const GetVenueAttendance = async (req, res) => {
+  const { counsellingVenue } = req.params;
+  const currentDate = new Date().toISOString().split('T')[0];
+
+  try {
+    const students = await Student.find({
+      counsellingVenue: counsellingVenue,
+      counsellingDate: {
+        $gte: new Date(currentDate),
+        $lt: new Date(new Date(currentDate).setDate(new Date(currentDate).getDate() + 1))
+      }
+    }).select('name srn father counsellingAttendance counsellingTokenNumber counsellingVenue');
+
+    return res.status(200).json({
+      ok: true,
+      data: students,
+      totalPresent: students.filter(s => s.counsellingAttendance === true).length,
+      totalStudents: students.length
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      message: "Failed to fetch venue attendance",
+      error: error.message
+    });
+  }
+};
+//----------------------------------------------------
+
 
 
 //Below is being created for orientation certificate, so that only l2qualified students be fetched

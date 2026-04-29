@@ -3,7 +3,9 @@
 import express from "express"
 
 import { createExaminationCenter,GetCentersDataByExaminationAndExamType, 
-    updateExaminationCentersAndCapacity, GetCentersDataByExaminationAndExamTypeS100 } from "../controllers/ExaminationCentersAndCapaictyController.js";
+    updateExaminationCentersAndCapacity, GetCentersDataByExaminationAndExamTypeS100,
+    GetCentersDataByExaminationAndExamTypeCounselling
+ } from "../controllers/ExaminationCentersAndCapaictyController.js";
 const router = express();
 
 
@@ -14,6 +16,8 @@ const router = express();
   router.post("/get-examination-centers-s100", GetCentersDataByExaminationAndExamTypeS100)
 
   router.post("/update-center-attendance", updateExaminationCentersAndCapacity)
+
+    router.post("/get-counselling-centers", GetCentersDataByExaminationAndExamTypeCounselling)
 
 
 

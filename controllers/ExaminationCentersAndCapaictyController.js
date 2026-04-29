@@ -255,6 +255,58 @@ export const GetCentersDataByExaminationAndExamTypeS100 = async (req, res) =>{
 
 
 
+//For counselling
+
+
+export const GetCentersDataByExaminationAndExamTypeCounselling = async (req, res) =>{
+
+    try {
+    // const { examinationLevel, examType, districtId, blockId, examinationVenueCode } = req.body;
+    
+    
+    const examinationLevel = "Counselling"
+    const examType = "MBCounselling"
+    
+    
+    // Check if required parameters are provided
+    if (!examinationLevel || !examType) {
+      return res.status(400).json({
+        success: false,
+        message: "Both examinationLevel and examType are required"
+      });
+    }
+    
+    // Build filter object
+    const filter = {
+      examinationLevel,
+      examType
+    };
+    
+    
+    
+    // Get examination centers with the filters
+    const centers = await ExaminationCentersAndCapacity.find(filter)
+      .sort({ examinationVenueCode: 1 });
+    
+    res.status(200).json({
+      success: true,
+      count: centers.length,
+      data: centers
+    });
+
+  } catch (error) {
+    console.error("Error fetching examination centers:", error);
+    
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching examination centers",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+
+
 
 
 //Update
