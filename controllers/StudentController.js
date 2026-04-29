@@ -672,7 +672,7 @@ export const GetAttendanceSheetDataS100 = async(req, res) =>{
 
 export const GetAttendanceSheetDataCounselling = async(req, res) =>{
 
-  const {counsellingVenue, selectionStatusForL3, gender} = req.body
+  const {counsellingVenue, selectionStatusForL3, gender, srn} = req.body
 
   console.log('I am insisde Student Controller at line 677')
   console.log('helloo')
@@ -685,7 +685,7 @@ export const GetAttendanceSheetDataCounselling = async(req, res) =>{
   const classOfStudent = "8"
 
   try {
-    const response = await Student.find({counsellingVenue:counsellingVenue})
+    const response = await Student.find({srn:srn, counsellingVenue:counsellingVenue})
  
     return res.status(200).json({
       ok: true,
