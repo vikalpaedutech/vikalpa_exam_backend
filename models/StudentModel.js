@@ -149,8 +149,19 @@ const StudentSchema = new Schema(
     counsellingRoomNumber:{type: String},
     cousellingReportingTime:{type: String},
     counsellingAttendance: {type: Boolean, default: false},
-    counsellingTokenNumber: {type: Number, default:0}
-
+    counsellingTokenNumber: {type: Number, default:0},
+    centerPreference1: {type: String, default: null},
+    centerPreference2: {type: String, default: null},
+    homeToCp1Distance: {type: Number, default: 0},
+    homeToCp2Distance: {type: Number, default: null},
+    student3PassportSizedPhoto: {type: Boolean, default:false},
+    studentAadharCardPhotoCopuy:{type: Boolean, default: false},
+    parentsAaadhar: {type: Boolean, default: false},
+    preCounsellingForm: {type: Boolean, default: false},
+    class8MarksheetPhotoCopy: {type: Boolean, default: false},
+    pppPhotocopy: {type: Boolean, default:false},
+    slc: {type: Boolean, default: false},
+    finalAdmissionStatus: {type: String} //Admission Done, Provisional, waiting
 
 
   },

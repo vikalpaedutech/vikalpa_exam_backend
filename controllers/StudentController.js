@@ -590,7 +590,7 @@ export const updateStudentAadhar = async (req, res) => {
 
 export const GetAttendanceSheetData = async(req, res) =>{
 
-  const {L3ExaminationCenter} = req.body
+  const {counsellingVenue} = req.body
 
   console.log('I am insisde Student Controller at line 594')
   console.log('helloo')
@@ -600,7 +600,7 @@ export const GetAttendanceSheetData = async(req, res) =>{
   const classOfStudent = "8"
 
   try {
-    const response = await Student.find({L3ExaminationCenter:L3ExaminationCenter, classOfStudent:classOfStudent})
+    const response = await Student.find({counsellingVenue:counsellingVenue, classOfStudent:classOfStudent})
  
     return res.status(200).json({
       ok: true,
@@ -883,6 +883,235 @@ export const GetVenueAttendance = async (req, res) => {
     });
   }
 };
+
+
+
+
+
+
+export const updateCenterPreference = async (req, res) => {
+  const { 
+    _id, 
+    centerPreference1, 
+    centerPreference2, 
+    homeToCp1Distance, 
+    homeToCp2Distance 
+  } = req.body;
+
+console.log(req.body)
+
+  try {
+    // Validate required fields
+    if (!_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Student ID is required"
+      });
+    }
+
+    // Prepare update object
+    const updateData = {};
+    
+    if (centerPreference1) {
+      updateData.centerPreference1 = centerPreference1;
+    }
+    if (centerPreference2) {
+      updateData.centerPreference2 = centerPreference2;
+    }
+    if (homeToCp1Distance !== undefined && homeToCp1Distance !== null) {
+      updateData.homeToCp1Distance = Number(homeToCp1Distance);
+    }
+    if (homeToCp2Distance !== undefined && homeToCp2Distance !== null) {
+      updateData.homeToCp2Distance = Number(homeToCp2Distance);
+    }
+
+    // Add updated timestamp
+    updateData.updatedAt = new Date();
+
+    // Update student record
+    const updatedStudent = await Student.findByIdAndUpdate(
+      _id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedStudent) {
+      return res.status(404).json({
+        success: false,
+        message: "Student not found"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Center preferences updated successfully",
+      data: updatedStudent
+    });
+
+  } catch (error) {
+    console.error("Error updating center preferences:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+};
+
+
+
+
+
+// In your backend controller file
+export const updateDocumentVerification = async (req, res) => {
+  const { 
+    _id, 
+    documents,
+    finalAdmissionStatus 
+  } = req.body;
+
+
+
+
+
+  console.log("Update Document Verification Request:", req.body);
+
+  try {
+    // Validate required fields
+    if (!_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Student ID is required"
+      });
+    }
+
+    // Prepare update object
+    const updateData = {};
+    
+    // Update document fields if provided
+    if (documents) {
+      if (documents.student3PassportSizedPhoto !== undefined) {
+        updateData.student3PassportSizedPhoto = documents.student3PassportSizedPhoto;
+      }
+      if (documents.studentAadharCardPhotoCopuy !== undefined) {
+        updateData.studentAadharCardPhotoCopuy = documents.studentAadharCardPhotoCopuy;
+      }
+      if (documents.parentsAaadhar !== undefined) {
+        updateData.parentsAaadhar = documents.parentsAaadhar;
+      }
+      if (documents.preCounsellingForm !== undefined) {
+        updateData.preCounsellingForm = documents.preCounsellingForm;
+      }
+      if (documents.class8MarksheetPhotoCopy !== undefined) {
+        updateData.class8MarksheetPhotoCopy = documents.class8MarksheetPhotoCopy;
+      }
+      if (documents.pppPhotocopy !== undefined) {
+        updateData.pppPhotocopy = documents.pppPhotocopy;
+      }
+      if (documents.slc !== undefined) {
+        updateData.slc = documents.slc;
+      }
+    }
+
+    // Update final admission status if provided
+    if (finalAdmissionStatus) {
+      updateData.finalAdmissionStatus = finalAdmissionStatus;
+    }
+
+    // Add updated timestamp
+    updateData.updatedAt = new Date();
+
+    // Update student record
+    const updatedStudent = await Student.findByIdAndUpdate(
+      _id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedStudent) {
+      return res.status(404).json({
+        success: false,
+        message: "Student not found"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Document verification updated successfully",
+      data: updatedStudent
+    });
+
+  } catch (error) {
+    console.error("Error updating document verification:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+};
+
+
+
+
+
+
+//Dashboard for counselling
+
+
+
+export const getCenterPreferenceDashboard = async (req, res) => {
+  try {
+    const result = await Student.aggregate([
+      {
+        $match: {
+          isPresentInL3Examination: true,
+          selectionStatusForL3: { $in: ["Selected", "Waiting"] }
+        }
+      },
+
+      {
+        $facet: {
+          preference1: [
+            {
+              $group: {
+                _id: {
+                  center: "$centerPreference1",
+                  status: "$selectionStatusForL3"
+                },
+                count: { $sum: 1 }
+              }
+            }
+          ],
+          preference2: [
+            {
+              $group: {
+                _id: {
+                  center: "$centerPreference2",
+                  status: "$selectionStatusForL3"
+                },
+                count: { $sum: 1 }
+              }
+            }
+          ]
+        }
+      }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: result[0]
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
+  }
+};
+
 //----------------------------------------------------
 
 

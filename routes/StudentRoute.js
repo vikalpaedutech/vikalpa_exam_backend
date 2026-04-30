@@ -6,7 +6,8 @@ import { createStudent,updateStudent, uploadImage,
     getStudentBySrnNumberOrSlipId, 
     IsAdmitCardDownloaded, updateStudentAadhar, GetAttendanceSheetData, FetchMbL2QualifiedStudent,markL3AttendanceOfStudents
     , GetAttendanceSheetDataS100, GetAttendanceSheetDataCounselling,
-    MarkCounsellingAttendance
+    MarkCounsellingAttendance, updateCenterPreference, updateDocumentVerification,
+    getCenterPreferenceDashboard
  } from "../controllers/StudentController.js";
 
 //creating express router.
@@ -38,5 +39,12 @@ router.post("/update-level3-attendance", markL3AttendanceOfStudents)
 router.post("/get-attendance-sheet-counselling", GetAttendanceSheetDataCounselling)
 
 router.post("/mark-counselling-attendance", MarkCounsellingAttendance)
+
+router.post("/update-center-preference", updateCenterPreference)
+
+
+router.post("/update-document-verification", updateDocumentVerification)
+
+router.post("/dashboard-counselling-centerpreference", getCenterPreferenceDashboard)
 
 export default router;
