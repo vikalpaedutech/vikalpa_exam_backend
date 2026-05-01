@@ -145,7 +145,7 @@ const StudentSchema = new Schema(
     orientationRoomNumber:{type: String, default: null},
     iscounsellingAdmitCardDownloaded:{type: Boolean, default: false},
     counsellingVenue:{type: String},
-    counsellingDate:{type: Date},
+    counsellingDate:{type: String},
     counsellingRoomNumber:{type: String},
     cousellingReportingTime:{type: String},
     counsellingAttendance: {type: Boolean, default: false},

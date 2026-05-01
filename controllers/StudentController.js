@@ -1060,6 +1060,61 @@ export const updateDocumentVerification = async (req, res) => {
 
 
 
+// export const getCenterPreferenceDashboard = async (req, res) => {
+//   try {
+//     const result = await Student.aggregate([
+//       {
+//         $match: {
+//           isPresentInL3Examination: true,
+//           selectionStatusForL3: { $in: ["Selected", "Waiting"] }
+//         }
+//       },
+
+//       {
+//         $facet: {
+//           preference1: [
+//             {
+//               $group: {
+//                 _id: {
+//                   center: "$centerPreference1",
+//                   status: "$selectionStatusForL3"
+//                 },
+//                 count: { $sum: 1 }
+//               }
+//             }
+//           ],
+//           preference2: [
+//             {
+//               $group: {
+//                 _id: {
+//                   center: "$centerPreference2",
+//                   status: "$selectionStatusForL3"
+//                 },
+//                 count: { $sum: 1 }
+//               }
+//             }
+//           ]
+//         }
+//       }
+//     ]);
+
+//     res.status(200).json({
+//       success: true,
+//       data: result[0]
+//     });
+
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Server Error"
+//     });
+//   }
+// };
+
+
+
+
 export const getCenterPreferenceDashboard = async (req, res) => {
   try {
     const result = await Student.aggregate([
@@ -1077,30 +1132,265 @@ export const getCenterPreferenceDashboard = async (req, res) => {
               $group: {
                 _id: {
                   center: "$centerPreference1",
-                  status: "$selectionStatusForL3"
+                  status: "$selectionStatusForL3",
+                  admissionStatus: "$finalAdmissionStatus"
                 },
                 count: { $sum: 1 }
               }
+            },
+            {
+              $group: {
+                _id: {
+                  center: "$_id.center",
+                  status: "$_id.status"
+                },
+                totalCount: { $sum: "$count" },
+                admissionStatusBreakdown: {
+                  $push: {
+                    admissionStatus: "$_id.admissionStatus",
+                    count: "$count"
+                  }
+                }
+              }
+            },
+            {
+              $project: {
+                center: "$_id.center",
+                status: "$_id.status",
+                totalCount: 1,
+                admissionStatusBreakdown: {
+                  $filter: {
+                    input: "$admissionStatusBreakdown",
+                    as: "item",
+                    cond: { $ne: ["$$item.admissionStatus", null] }
+                  }
+                }
+              }
+            },
+            {
+              $group: {
+                _id: "$center",
+                statuses: {
+                  $push: {
+                    status: "$status",
+                    totalCount: "$totalCount",
+                    admissionStatusBreakdown: "$admissionStatusBreakdown"
+                  }
+                }
+              }
+            },
+            {
+              $project: {
+                center: "$_id",
+                selected: {
+                  $let: {
+                    vars: {
+                      selectedData: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: "$statuses",
+                              as: "s",
+                              cond: { $eq: ["$$s.status", "Selected"] }
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+                    in: {
+                      totalCount: { $ifNull: ["$$selectedData.totalCount", 0] },
+                      breakdown: {
+                        $ifNull: ["$$selectedData.admissionStatusBreakdown", []]
+                      }
+                    }
+                  }
+                },
+                waiting: {
+                  $let: {
+                    vars: {
+                      waitingData: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: "$statuses",
+                              as: "s",
+                              cond: { $eq: ["$$s.status", "Waiting"] }
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+                    in: {
+                      totalCount: { $ifNull: ["$$waitingData.totalCount", 0] }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              $match: {
+                $or: [
+                  { "selected.totalCount": { $gt: 0 } },
+                  { "waiting.totalCount": { $gt: 0 } }
+                ]
+              }
+            },
+            {
+              $sort: { center: 1 }
             }
           ],
+          
           preference2: [
             {
               $group: {
                 _id: {
                   center: "$centerPreference2",
-                  status: "$selectionStatusForL3"
+                  status: "$selectionStatusForL3",
+                  admissionStatus: "$finalAdmissionStatus"
                 },
                 count: { $sum: 1 }
               }
+            },
+            {
+              $group: {
+                _id: {
+                  center: "$_id.center",
+                  status: "$_id.status"
+                },
+                totalCount: { $sum: "$count" },
+                admissionStatusBreakdown: {
+                  $push: {
+                    admissionStatus: "$_id.admissionStatus",
+                    count: "$count"
+                  }
+                }
+              }
+            },
+            {
+              $project: {
+                center: "$_id.center",
+                status: "$_id.status",
+                totalCount: 1,
+                admissionStatusBreakdown: {
+                  $filter: {
+                    input: "$admissionStatusBreakdown",
+                    as: "item",
+                    cond: { $ne: ["$$item.admissionStatus", null] }
+                  }
+                }
+              }
+            },
+            {
+              $group: {
+                _id: "$center",
+                statuses: {
+                  $push: {
+                    status: "$status",
+                    totalCount: "$totalCount",
+                    admissionStatusBreakdown: "$admissionStatusBreakdown"
+                  }
+                }
+              }
+            },
+            {
+              $project: {
+                center: "$_id",
+                selected: {
+                  $let: {
+                    vars: {
+                      selectedData: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: "$statuses",
+                              as: "s",
+                              cond: { $eq: ["$$s.status", "Selected"] }
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+                    in: {
+                      totalCount: { $ifNull: ["$$selectedData.totalCount", 0] },
+                      breakdown: {
+                        $ifNull: ["$$selectedData.admissionStatusBreakdown", []]
+                      }
+                    }
+                  }
+                },
+                waiting: {
+                  $let: {
+                    vars: {
+                      waitingData: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: "$statuses",
+                              as: "s",
+                              cond: { $eq: ["$$s.status", "Waiting"] }
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+                    in: {
+                      totalCount: { $ifNull: ["$$waitingData.totalCount", 0] }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              $match: {
+                $or: [
+                  { "selected.totalCount": { $gt: 0 } },
+                  { "waiting.totalCount": { $gt: 0 } }
+                ]
+              }
+            },
+            {
+              $sort: { center: 1 }
             }
           ]
         }
       }
     ]);
 
+    // Transform the data to a more readable format
+    const transformedData = {
+      preference1: result[0].preference1.map(item => ({
+        center: item.center,
+        selected: {
+          total: item.selected.totalCount,
+          admissionDone: item.selected.breakdown.find(b => b.admissionStatus === "Admission Done")?.count || 0,
+          provisional: item.selected.breakdown.find(b => b.admissionStatus === "Provisional")?.count || 0,
+          waiting: item.selected.breakdown.find(b => b.admissionStatus === "Waiting")?.count || 0
+        },
+        waiting: {
+          total: item.waiting.totalCount
+        }
+      })),
+      preference2: result[0].preference2.map(item => ({
+        center: item.center,
+        selected: {
+          total: item.selected.totalCount,
+          admissionDone: item.selected.breakdown.find(b => b.admissionStatus === "Admission Done")?.count || 0,
+          provisional: item.selected.breakdown.find(b => b.admissionStatus === "Provisional")?.count || 0,
+          waiting: item.selected.breakdown.find(b => b.admissionStatus === "Waiting")?.count || 0
+        },
+        waiting: {
+          total: item.waiting.totalCount
+        }
+      }))
+    };
+
     res.status(200).json({
       success: true,
-      data: result[0]
+      data: transformedData
     });
 
   } catch (error) {
@@ -1111,7 +1401,6 @@ export const getCenterPreferenceDashboard = async (req, res) => {
     });
   }
 };
-
 //----------------------------------------------------
 
 
