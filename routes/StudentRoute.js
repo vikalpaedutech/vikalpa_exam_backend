@@ -7,7 +7,7 @@ import { createStudent,updateStudent, uploadImage,
     IsAdmitCardDownloaded, updateStudentAadhar, GetAttendanceSheetData, FetchMbL2QualifiedStudent,markL3AttendanceOfStudents
     , GetAttendanceSheetDataS100, GetAttendanceSheetDataCounselling,
     MarkCounsellingAttendance, updateCenterPreference, updateDocumentVerification,
-    getCenterPreferenceDashboard
+    getCenterPreferenceDashboard, updateCounsellingFields
  } from "../controllers/StudentController.js";
 
 //creating express router.
@@ -46,5 +46,8 @@ router.post("/update-center-preference", updateCenterPreference)
 router.post("/update-document-verification", updateDocumentVerification)
 
 router.post("/dashboard-counselling-centerpreference", getCenterPreferenceDashboard)
+
+
+router.post("/update-counselling-fields", updateCounsellingFields)
 
 export default router;

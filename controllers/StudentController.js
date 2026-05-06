@@ -685,13 +685,14 @@ export const GetAttendanceSheetDataCounselling = async(req, res) =>{
   const classOfStudent = "8"
 
   try {
-    const response = await Student.find({srn:srn, counsellingVenue:counsellingVenue})
+    const response = await Student.find({srn:srn})
  
     return res.status(200).json({
       ok: true,
       message: "Data fetched successfully!",
       data: response,
     });
+    console.log(response.data)
   } catch (error) {
     console.log("Error occures while updating", error)
      return res.status(500).json({
@@ -705,6 +706,90 @@ export const GetAttendanceSheetDataCounselling = async(req, res) =>{
 
 
 
+
+
+
+
+
+export const updateCounsellingFields = async (req, res) => {
+  try {
+    const { _id } = req.body;
+
+    console.log('update status counselling')
+    
+    if (!_id) {
+      return res.status(400).json({
+        success: false,
+        message: "_id to bhej de bhai"
+      });
+    }
+
+    const {
+      centerPreference1,
+      centerPreference2,
+      homeToCp1Distance,
+      homeToCp2Distance,
+      student3PassportSizedPhoto,
+      studentAadharCardPhotoCopuy,
+      parentsAaadhar,
+      preCounsellingForm,
+      class8MarksheetPhotoCopy,
+      pppPhotocopy,
+      slc,
+      finalAdmissionStatus,
+      counsellingAttendance
+    } = req.body;
+
+    // Sirf wahi fields update karo jo req.body mein aaye hain
+    const updateFields = {};
+    
+    if (centerPreference1 !== undefined) updateFields.centerPreference1 = centerPreference1;
+    if (centerPreference2 !== undefined) updateFields.centerPreference2 = centerPreference2;
+    if (homeToCp1Distance !== undefined) updateFields.homeToCp1Distance = homeToCp1Distance;
+    if (homeToCp2Distance !== undefined) updateFields.homeToCp2Distance = homeToCp2Distance;
+    if (student3PassportSizedPhoto !== undefined) updateFields.student3PassportSizedPhoto = student3PassportSizedPhoto;
+    if (studentAadharCardPhotoCopuy !== undefined) updateFields.studentAadharCardPhotoCopuy = studentAadharCardPhotoCopuy;
+    if (parentsAaadhar !== undefined) updateFields.parentsAaadhar = parentsAaadhar;
+    if (preCounsellingForm !== undefined) updateFields.preCounsellingForm = preCounsellingForm;
+    if (class8MarksheetPhotoCopy !== undefined) updateFields.class8MarksheetPhotoCopy = class8MarksheetPhotoCopy;
+    if (pppPhotocopy !== undefined) updateFields.pppPhotocopy = pppPhotocopy;
+    if (slc !== undefined) updateFields.slc = slc;
+    if (finalAdmissionStatus !== undefined) updateFields.finalAdmissionStatus = finalAdmissionStatus;
+    if (counsellingAttendance !== undefined) updateFields.counsellingAttendance = counsellingAttendance;
+
+    if (Object.keys(updateFields).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Koi field update karne ko nahi mila"
+      });
+    }
+
+    const updatedStudent = await Student.findByIdAndUpdate(
+      _id,
+      { $set: updateFields },
+      { new: true }
+    );
+
+    if (!updatedStudent) {
+      return res.status(404).json({
+        success: false,
+        message: "Student nahi mila"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Update ho gaya",
+      data: updatedStudent
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
 
 
 
