@@ -621,32 +621,104 @@ export const GetAttendanceSheetData = async(req, res) =>{
 
 
 
+// export const GetAttendanceSheetDataS100 = async(req, res) =>{
+
+//   const {L2ExaminationCenter, batchDivisionForL2Examination, selectionStatusForL2, gender, L2Qualified} = req.body
+
+//   console.log('I am insisde Student Controller at line 594')
+//   console.log('helloo')
+//   console.log(req.body)
+
+
+//   let genderArray = []
+
+//   if (req.body.gender === 'BOTH'){
+//     genderArray = ["MALE", "FEMALE"]
+//   } else {
+//     genderArray.push(req.body.gender)
+//   }
+
+//   console.log(genderArray)
+
+//   //for class wise separation
+//   const classOfStudent = "10"
+
+//   try {
+//     const response = await Student.find({L2ExaminationCenter:L2ExaminationCenter,
+//        batchDivisionForL2Examination:batchDivisionForL2Examination, selectionStatusForL2:selectionStatusForL2,
+//       gender:{$in:genderArray}})
+ 
+//     return res.status(200).json({
+//       ok: true,
+//       message: "Data fetched successfully!",
+//       data: response,
+//     });
+//   } catch (error) {
+//     console.log("Error occures while updating", error)
+//      return res.status(500).json({
+//       ok: false,
+//       message: "Internal server error",
+//       error: err.message,
+//     });
+//   }
+// }
+
+
+
+
+
+
+
 export const GetAttendanceSheetDataS100 = async(req, res) =>{
 
-  const {L2ExaminationCenter, batchDivisionForL2Examination, selectionStatusForL2, gender} = req.body
+  const {L2ExaminationCenter, batchDivisionForL2Examination, selectionStatusForL2, gender, L2Qualified, finalShortListOrWaitListStudents} = req.body
 
-  console.log('I am insisde Student Controller at line 594')
-  console.log('helloo')
+  console.log('I am inside Student Controller, api: GetAttendanceSheetDataS100')
   console.log(req.body)
-
 
   let genderArray = []
 
   if (req.body.gender === 'BOTH'){
     genderArray = ["MALE", "FEMALE"]
-  } else {
+  } else if (req.body.gender) {
     genderArray.push(req.body.gender)
+  } else {
+    // If no gender specified, include both
+    genderArray = ["MALE", "FEMALE"]
   }
 
   console.log(genderArray)
 
+  // Handle BOTH case for finalShortListOrWaitListStudents
+  let statusQuery = {};
+  if (finalShortListOrWaitListStudents === 'BOTH') {
+    statusQuery = {
+      finalShortListOrWaitListStudents: { $in: ["Selected", "Waitinglist"] }
+    };
+  } else if (finalShortListOrWaitListStudents) {
+    statusQuery = {
+      finalShortListOrWaitListStudents: finalShortListOrWaitListStudents
+    };
+  }
+
+  // L2Qualified defaults to true if not provided
+  let qualifiedQuery = {};
+  if (L2Qualified !== undefined && L2Qualified !== null) {
+    qualifiedQuery.L2Qualified = L2Qualified;
+  } else {
+    qualifiedQuery.L2Qualified = true; // Default to true
+  }
+
   //for class wise separation
-  const classOfStudent = "8"
+  const classOfStudent = "10"
 
   try {
-    const response = await Student.find({L2ExaminationCenter:L2ExaminationCenter,
-       batchDivisionForL2Examination:batchDivisionForL2Examination, selectionStatusForL2:selectionStatusForL2,
-      gender:{$in:genderArray}})
+    const response = await Student.find({
+      ...qualifiedQuery,
+      ...statusQuery,
+      gender: { $in: genderArray },
+      classOfStudent: classOfStudent
+    })
  
     return res.status(200).json({
       ok: true,
@@ -654,14 +726,15 @@ export const GetAttendanceSheetDataS100 = async(req, res) =>{
       data: response,
     });
   } catch (error) {
-    console.log("Error occures while updating", error)
-     return res.status(500).json({
+    console.log("Error occurred while fetching data", error)
+    return res.status(500).json({
       ok: false,
       message: "Internal server error",
-      error: err.message,
+      error: error.message,
     });
   }
-}
+};
+
 
 
 
