@@ -162,10 +162,10 @@ export const GetCentersDataByExaminationAndExamType = async (req, res) =>{
     // const { examinationLevel, examType, districtId, blockId, examinationVenueCode } = req.body;
     
     
-    const examinationLevel = "Counselling"
-    const examType = "MBCounselling"
+    const examinationLevel = "1"
+    const examType = "S100-EXTENDED-100-SEATS"
     
-    
+    console.log("i am in GetCentersDataByExaminationAndExamType ")
     // Check if required parameters are provided
     if (!examinationLevel || !examType) {
       return res.status(400).json({
