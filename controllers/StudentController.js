@@ -590,7 +590,7 @@ export const updateStudentAadhar = async (req, res) => {
 
 export const GetAttendanceSheetData = async(req, res) =>{
 
-  const {counsellingVenue} = req.body
+  const {counsellingVenue, L1ExaminationCenter} = req.body
 
   console.log('I am insisde Student Controller at line 594')
   console.log('helloo')
@@ -600,7 +600,7 @@ export const GetAttendanceSheetData = async(req, res) =>{
   const classOfStudent = "8"
 
   try {
-    const response = await Student.find({counsellingVenue:counsellingVenue, classOfStudent:classOfStudent})
+    const response = await Student.find({L1ExaminationCenter:L1ExaminationCenter})
  
     return res.status(200).json({
       ok: true,
