@@ -702,23 +702,28 @@ export const GetAttendanceSheetDataS100 = async(req, res) =>{
   }
 
   // L2Qualified defaults to true if not provided
-  let qualifiedQuery = {};
-  if (L2Qualified !== undefined && L2Qualified !== null) {
-    qualifiedQuery.L2Qualified = L2Qualified;
-  } else {
-    qualifiedQuery.L2Qualified = true; // Default to true
-  }
+  // let qualifiedQuery = {};
+  // if (L2Qualified !== undefined && L2Qualified !== null) {
+  //   qualifiedQuery.L2Qualified = L2Qualified;
+  // } else {
+  //   qualifiedQuery.L2Qualified = true; // Default to true
+  // }
 
   //for class wise separation
   const classOfStudent = "10"
 
   try {
     const response = await Student.find({
-      ...qualifiedQuery,
+      // ...qualifiedQuery,
       ...statusQuery,
       gender: { $in: genderArray },
-      classOfStudent: classOfStudent
+      classOfStudent: classOfStudent,
+      L2ExaminationCenter:L2ExaminationCenter,
+      batchDivisionForL2Examination:batchDivisionForL2Examination
+
     })
+
+    console.log(response.length)
  
     return res.status(200).json({
       ok: true,
